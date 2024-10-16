@@ -31,7 +31,7 @@ class LiveRoom():
             "room_info": {
                 "live_status": live_status,
                 "title": title,
-                "cover": "http://i0.hdslb.com/bfs/live/new_room_cover/4f7999ba7da7f7269300b8ca74cde151de4a2e9f.jpg",
+                "cover": "https://pbs.twimg.com/media/GZmju6EaIAAT1C0?format=jpg&name=medium",
                 "parent_area_name": "父分區" + biede,
                 "area_name": "子分區" + biede,
                 "uid": 114514

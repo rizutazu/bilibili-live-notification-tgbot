@@ -9,8 +9,8 @@ from asyncio import sleep
 from datetime import datetime
 from pytz import timezone
 
-# from dummyliveroom import LiveRoom
-from bilibili_api.live import LiveRoom
+from dummyliveroom import LiveRoom
+# from bilibili_api.live import LiveRoom
 from tinyapplication import TinyApplication, handleStart, handleList, handleAdd, handleRemove, handleEcho
 from roomrecord import RoomRecord
 
