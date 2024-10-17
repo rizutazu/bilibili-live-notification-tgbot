@@ -24,7 +24,7 @@ async def handleList(update: Update, caller: TinyApplication, argument: str):
             live_status_str = ["[🟢]直播中: ", "[🟠]未開播: "]
             newline += live_status_str[0] if info["is_living"] else live_status_str[1]
         else:
-            newline += "[?]未知: "
+            newline += "[❓]未知: "
 
         newline = escape_markdown(newline, 2)
 
