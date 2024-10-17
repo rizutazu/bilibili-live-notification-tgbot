@@ -3,7 +3,7 @@ from telegram import Bot, Message, BotCommand, MessageEntity, LinkPreviewOptions
 from telegram.request import HTTPXRequest
 from telegram.helpers import escape_markdown
 from telegram.error import NetworkError
-from bilibili_api import Credential, ResponseCodeException
+from bilibili_api import ResponseCodeException
 from aiolimiter import AsyncLimiter
 from asyncio.locks import Lock
 from asyncio import sleep
@@ -13,9 +13,11 @@ import logging
 
 # from dummyliveroom import LiveRoom
 from bilibili_api.live import LiveRoom
-from tinyapplication import TinyApplication
-from roomrecord import RoomRecord
-from commandhandler import *
+
+
+from .tinyapplication import TinyApplication
+from .roomrecord import RoomRecord
+from .commandhandler import *
 
 
 logger = logging.getLogger("BilibiliLiveNotificationBot")
@@ -116,7 +118,7 @@ class BilibiliLiveNotificationBot():
             new_record.parseResult(result)
 
             # print(f"BilibiliLiveBot: {room_id}: {new_record.uname}: is_living: {new_record.is_living}")
-            logger.info(f"Retrived room info: room_id={room_id}, uname={new_record.uname}, is_living={new_record.is_living}")
+            logger.info(f"Retrieved room info: room_id={room_id}, uname={new_record.uname}, is_living={new_record.is_living}")
             # update record && action
             # state change matrix of is_living:
             # state\input | F(沒直播)        | T(直播中)    |

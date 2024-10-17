@@ -1,7 +1,6 @@
 from telegram.ext import Updater
 from asyncio import Queue, sleep
 from telegram import Bot, Message, MessageEntity, Update
-from telegram.helpers import escape_markdown
 from telegram.error import NetworkError
 import logging
 
@@ -26,7 +25,7 @@ class TinyApplication():
                 cmd = message.text.lstrip("/")
                 argument = ""
             else:
-                cmd = message.text[:idx].ltrip("/")
+                cmd = message.text[:idx].lstrip("/")
                 argument = message.text[idx:].strip()
             return (cmd, argument)
         else:

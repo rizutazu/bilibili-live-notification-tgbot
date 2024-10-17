@@ -1,4 +1,4 @@
-from tinyapplication import TinyApplication
+from .tinyapplication import TinyApplication
 from telegram import Update
 from telegram.helpers import escape_markdown
 
@@ -7,26 +7,36 @@ async def handleStart(update: Update, caller: TinyApplication, argument: str):
 輸入 /subscribe room_id 以添加提醒的直播間；
 輸入 /list 以列出加入提醒列表的直播間；
 輸入 /unsubscribe room_id 以將直播間移出提醒列表；
-輸入 /interval 以顯示輪詢完整提醒列表的間隔， 輸入 /interval number_int 以修改這一間隔；
+輸入 /interval 以顯示輪詢完整提醒列表的間隔，
+輸入 /interval number_int 以修改這一間隔；
 輸入 /echo 以查看bot是否在運行
 """
     await update.message.reply_text(message)
 
 async def handleList(update: Update, caller: TinyApplication, argument: str):
     text = ""
-    live_status_str = ["[🟢]直播中: ", "[🟠]未開播: "]
+
     room_info = await caller.owner.getSubscribedRooms()
     for room_id, info in room_info.items():
+
         newline = ""
         if info["is_living"] != None:
+            live_status_str = ["[🟢]直播中: ", "[🟠]未開播: "]
             newline += live_status_str[0] if info["is_living"] else live_status_str[1]
+        else:
+            newline += "[?]未知: "
+
         newline = escape_markdown(newline, 2)
+
         newline += f"[直播間 {room_id}](https://live.bilibili.com/{room_id})"
+
         if info["uname"] != None:
             newline += f": [{escape_markdown(info['uname'], 2)}](https://space.bilibili.com/{info['uid']})\n"
         else:
             newline += "\n"
+
         text += newline
+
     await update.message.reply_text(text, parse_mode="MarkdownV2", disable_web_page_preview=True)
 
 async def handleSubscribe(update: Update, caller: TinyApplication, argument: str):

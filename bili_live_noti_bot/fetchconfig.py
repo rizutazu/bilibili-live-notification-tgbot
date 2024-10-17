@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-import pytz
 _config_json_data = None
 _config_json_name = "config.json"
 _file_not_found = False
