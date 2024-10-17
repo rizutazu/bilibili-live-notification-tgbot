@@ -3,6 +3,10 @@ from asyncio import Queue, sleep
 from telegram import Bot, Message, MessageEntity, Update
 from telegram.helpers import escape_markdown
 from telegram.error import NetworkError
+import logging
+
+logger = logging.getLogger("TinyApplication")
+
 class TinyApplication():
     def __init__(self, tg_bot: Bot, parent) -> None:
         self.update_queue: Queue = Queue()
@@ -31,9 +35,11 @@ class TinyApplication():
     async def handleUpdate(self, update: Update):
         if update.message.chat_id != int(self.parent.chat_id):
             return
+        logger.info(f"New message: {update.message.text}")
         command, argument = self.parseCommand(update.message)
         handler = self.command_handlers.get(command)
         if handler != None:
+            logger.info(f"Run /{command} handler")
             await handler(update, self, argument)
 
     async def start(self):
@@ -43,10 +49,13 @@ class TinyApplication():
                     await self.updater.initialize()
                 if not self.updater.running:
                     await self.updater.start_polling(drop_pending_updates=True)
+                logger.info("Start polling updates from telegram")
                 while True:
                     update = await self.update_queue.get()
                     await self.handleUpdate(update)
+                    # todo: update may have None message attribute
             except NetworkError:
+                logger.warning("Telegram NetworkError, will shutdown and restart after 5s")
                 if self.updater.running:
                     await self.updater.stop()
                 if self.updater._initialized:
@@ -55,9 +64,12 @@ class TinyApplication():
                 continue
 
 async def handleStart(update: Update, caller: TinyApplication, argument: str):
-    message = """Bilibili live bot 已啟動。
-輸入 /add room_id 以添加提醒直播間， 
-輸入 /list 以列出加入提醒列表的直播間。
+    message = """Bilibili live notification bot 已啟動。
+輸入 /add room_id 以添加提醒的直播間；
+輸入 /list 以列出加入提醒列表的直播間；
+輸入 /remove room_id 以將直播間移出提醒列表；
+輸入 /interval 以顯示輪詢完整提醒列表的間隔， 輸入 /interval number_int 以修改這一間隔；
+輸入 /echo 以查看bot是否在運行
 """
     await update.message.reply_text(message)
 
@@ -107,3 +119,18 @@ async def handleEcho(update: Update, caller: TinyApplication, argument: str):
     if argument == "":
         text = "Bot is running"
     await update.message.reply_text(text)
+
+async def handleInterval(update: Update, caller: TinyApplication, argument: str):
+    if argument == "":
+        old_time = caller.parent.sleep_time
+        await update.message.reply_text(f"當前的輪詢間隔為 {old_time}s")
+    elif not argument.isnumeric():
+        await update.message.reply_text("請給出有效的輪詢間隔")
+    else:
+        new_time = int(argument)
+        old_time = caller.parent.sleep_time
+        if old_time == new_time:
+            await update.message.reply_text("輪詢間隔未發生變化")
+        else:
+            caller.parent.sleep_time = new_time
+            await update.message.reply_text(f"已修改輪詢間隔： {old_time}s ==> {new_time}s")
