@@ -1,8 +1,11 @@
 {
     "tgbot_token": "114514:aabbccdd",
     "tg_chat_id": "114514",
+    "timezone": "Asia/Shanghai",
+    "poll_interval": 10,
     "subscribed_rooms": [
-        "1",
+        "114",
+        "1", 
         "3"
     ]
 }

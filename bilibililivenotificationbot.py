@@ -13,8 +13,9 @@ import logging
 
 # from dummyliveroom import LiveRoom
 from bilibili_api.live import LiveRoom
-from tinyapplication import TinyApplication, handleStart, handleList, handleAdd, handleRemove, handleEcho, handleInterval
+from tinyapplication import TinyApplication
 from roomrecord import RoomRecord
+from commandhandler import *
 
 
 logger = logging.getLogger("BilibiliLiveNotificationBot")
@@ -23,7 +24,7 @@ logger = logging.getLogger("BilibiliLiveNotificationBot")
 class BilibiliLiveNotificationBot():
 
     def __init__(self, tg_bot_token: str, tg_chat_id: str, 
-                    timezone_str: str, bili_credential: Credential=None) -> None:
+                    timezone_str: str, poll_interval: str) -> None:
 
         # bot-related
         self.token: str = tg_bot_token
@@ -33,14 +34,14 @@ class BilibiliLiveNotificationBot():
         self.app = TinyApplication(self.tg_bot, self)
 
         # subscribe configs
-        self.bili_credential = bili_credential
+        self.bili_credential = None
         self.subscribed_rooms: list[str] = []   # room ids
         self.room_records: dict[str, RoomRecord] = {}
 
         # locks
         self.config_lock = Lock()
         self.rate_limiter = AsyncLimiter(50)    # rate: 50 / 1min
-        self.sleep_time: int = 5
+        self.poll_interval: int = poll_interval
 
         self.timezone = timezone(timezone_str)
 
@@ -187,7 +188,7 @@ class BilibiliLiveNotificationBot():
 
     async def setSleepTime(self, sleep_time: int):
         # 因為好看
-        self.sleep_time = sleep_time
+        self.poll_interval = sleep_time
 
     async def sendMessage(self, message: str):
 
@@ -262,17 +263,17 @@ class BilibiliLiveNotificationBot():
         bot_commands = [
             BotCommand("start", "啟動bot，以及顯示help"),
             BotCommand("list", "列出提醒的直播間以及記錄的信息"),
-            BotCommand("add", "添加提醒的直播間"),
-            BotCommand("remove", "移出提醒列表"),
+            BotCommand("subscribe", "添加提醒的直播間"),
+            BotCommand("unsubscribe", "移出提醒列表"),
             BotCommand("interval", "顯示，或修改對完整的提醒列表的輪詢的間隔"),
-            BotCommand("echo", "echo")
+            BotCommand("echo", "還活著嗎")
         ]
         await self.tg_bot.set_my_commands(bot_commands)
 
         self.app.addCommandHandler("start", handleStart)
         self.app.addCommandHandler("list", handleList)
-        self.app.addCommandHandler("add", handleAdd)
-        self.app.addCommandHandler("remove", handleRemove)
+        self.app.addCommandHandler("subscribe", handleSubscribe)
+        self.app.addCommandHandler("unsubscribe", handleUnsubscribe)
         self.app.addCommandHandler("interval", handleInterval)
         self.app.addCommandHandler("echo", handleEcho)
 
@@ -287,6 +288,6 @@ class BilibiliLiveNotificationBot():
                 await self.updateRoomInformation(room_id)
                 self.config_lock.release()
             await self.deleteInvalidRooms()
-            await sleep(self.sleep_time)
+            await sleep(self.poll_interval)
 
 

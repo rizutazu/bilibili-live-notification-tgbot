@@ -1,4 +1,4 @@
-from getsecret import *
+from fetchconfig import *
 from bilibililivenotificationbot import BilibiliLiveNotificationBot
 from asyncio import gather, run
 import logging
@@ -11,9 +11,15 @@ logging.basicConfig(
 
 async def main():
 
-    bot = BilibiliLiveNotificationBot(get_tg_bot_token(), get_tg_chat_id(), "Asia/Shanghai")
-    await bot.subscribeRooms(get_subscribed_rooms())
-    # await bot.subscribeRooms(["114514"])
+    token = getTGBotToken()
+    chat_id = getTGChatID()
+    timezone = getTimezone()
+    interval = getPollInterval()
+    sub_lst = getSubscribeRooms()
+
+    bot = BilibiliLiveNotificationBot(token, chat_id, timezone, interval)
+    await bot.subscribeRooms(sub_lst)
+
     await gather(bot.subscribeStart(), bot.appStart())
 
 if __name__ == "__main__":
