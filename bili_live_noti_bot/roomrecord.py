@@ -1,5 +1,5 @@
 from __future__ import annotations
-from bilibili_api.live import LiveRoom
+from .liveroom import LiveRoom
 from telegram import Message
 from datetime import datetime
 
@@ -17,7 +17,6 @@ class RoomRecord():
         self.message_sent: Message = None           # 已經發送的通知消息，用於在直播結束時修改
         self.room_title: str = None                 # 直播間標題
         self.start_time: datetime = None            # 開始直播的時間
-        # self.stop_time: datetime = None             # 結束直播的時間
         self.cover_url: str = None                  # 直播封面的鏈接
         self.parent_area_name: str = None           # 分區名稱-parent 
         self.area_name: str = None                  # 分區名稱-child
@@ -32,6 +31,7 @@ class RoomRecord():
         self.cover_url = result["room_info"]["cover"]
         self.parent_area_name = result["room_info"]["parent_area_name"]
         self.area_name = result["room_info"]["area_name"]
+        self.start_time = datetime.fromtimestamp(result["room_info"]["live_start_time"])
 
     def hasUpdate(self, new_record: RoomRecord) -> bool:
 
@@ -56,7 +56,6 @@ class RoomRecord():
         self.room_title = None
         self.message_sent = None
         self.start_time = None
-        # self.stop_time = None
         self.cover_url = None
         self.parent_area_name = None
         self.area_name = None

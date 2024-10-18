@@ -4,3 +4,7 @@ services:
     build: .
     volumes:
       - .:/usr/src/bilibili-live-notification-tgbot
+    logging:
+      driver: "json-file"
+      options:
+          max-size: "10m"

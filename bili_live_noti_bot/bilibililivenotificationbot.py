@@ -3,7 +3,6 @@ from telegram import Bot, Message, BotCommand, MessageEntity, LinkPreviewOptions
 from telegram.request import HTTPXRequest
 from telegram.helpers import escape_markdown
 from telegram.error import NetworkError
-from bilibili_api import ResponseCodeException
 from aiolimiter import AsyncLimiter
 from asyncio.locks import Lock
 from asyncio import sleep
@@ -12,7 +11,7 @@ from pytz import timezone
 import logging
 
 # from dummyliveroom import LiveRoom
-from bilibili_api.live import LiveRoom
+from .liveroom import LiveRoom, ResponseCodeException
 
 
 from .tinyapplication import TinyApplication
@@ -36,7 +35,6 @@ class BilibiliLiveNotificationBot():
         self.app = TinyApplication(self.tg_bot, self)
 
         # subscribe configs
-        self.bili_credential = None
         self.subscribed_rooms: list[str] = []   # room ids
         self.room_records: dict[str, RoomRecord] = {}
 
@@ -57,7 +55,7 @@ class BilibiliLiveNotificationBot():
             if self.room_records.get(room_id) == None:
                 self.room_records[room_id] = RoomRecord(room_id)
             if self.room_records[room_id].room == None:
-                self.room_records[room_id].room = LiveRoom(int(room_id), self.bili_credential)
+                self.room_records[room_id].room = LiveRoom(int(room_id))
         self.config_lock.release()
 
         if rooms != []:
@@ -123,17 +121,15 @@ class BilibiliLiveNotificationBot():
             # state change matrix of is_living:
             # state\input | F(沒直播)        | T(直播中)    |
             # ---------------------------------------------
-            # None        | F               | T,send nmsg |
             # T           | F,mark end      | T,check diff|
-            # F           | F               | T,send msg  |
-            # send msg: 發送開播提醒，並記錄開播時間
-            # send nmsg: 等於send msg，但不記錄開播時間
+            # F/None      | F               | T,send msg  |
+            # send msg: 發送開播提醒
             # check diff: 檢查信息變動
             current_record = self.room_records[room_id]
 
-            if current_record.is_living == None:    # 啟動bot後的第一個狀態
+            if current_record.is_living != True:    # 啟動bot後的第一個狀態/false
                 if new_record.is_living:            # 第一次檢查 --> living, 開始直播時間未知
-                    logger.info(f"Room {room_id}: send live start message without timestamp")
+                    logger.info(f"Room {room_id}: send live start message")
                     if current_record.message_sent == None:
                         current_record.message_sent = await self.sendLiveStartMessage(new_record)
                     current_record.update(new_record)
@@ -141,12 +137,10 @@ class BilibiliLiveNotificationBot():
                 else:                               
                     current_record.is_living = False
                     current_record.update(new_record)
-            elif current_record.is_living:          # living -> 檢查下一狀態
+            else:          # living -> 檢查下一狀態
                 if new_record.is_living:            # 還在直播，檢查更新
                     if current_record.hasUpdate(new_record):
                         logger.info(f"Room {room_id}: update sent message")
-                        new_record.start_time = current_record.start_time
-                        new_record.message_sent = current_record.message_sent
                         current_record.message_sent = await self.modifySentLiveMessage(new_record)
                         current_record.update(new_record)
                 else:                               # 沒在播了
@@ -154,25 +148,13 @@ class BilibiliLiveNotificationBot():
                     await self.markSentLiveMessageAsEnd(current_record)
                     current_record.is_living = False
                     current_record.clear()
-            else:                               # not living -> 檢查下一狀態
-                if new_record.is_living:        # 無到有開始直播，記錄開始直播的時間
-                    logger.info(f"Room {room_id}: send live start message with timestamp")
-                    current_record.start_time = datetime.now()
-                    new_record.start_time = current_record.start_time
-                    if current_record.message_sent == None:
-                        current_record.message_sent = await self.sendLiveStartMessage(new_record)
-                    current_record.is_living = True
-                    current_record.update(new_record)
-                else:
-                    if current_record.hasUpdate(new_record):
-                        current_record.update(new_record)
                     
         except ResponseCodeException:
-            logger.info(f"Room {room_id}: bilibili_api ResponseCodeException, mark as invalid")
+            logger.info(f"Room {room_id}: bilibili api ResponseCodeException, mark as invalid")
             self.room_records[room_id].is_valid = False
             await self.sendWarningMessage(f"直播間 {room_id} 不存在，已禁用")
         except TimeoutError:
-            logger.warning(f"bilibili_api TimeoutError, will resume after 5s")
+            logger.warning(f"bilibili api TimeoutError, will resume after 5s")
             await sleep(5)
         except NetworkError:
             # telegram network error
@@ -180,7 +162,6 @@ class BilibiliLiveNotificationBot():
             await sleep(5)
         except Exception as e:
             logger.error(f"Unexpected error at updateRoomInformation(): {type(e).__name__}: {str(e)}")
-
 
     # rate limit: 50/1min
     async def getRoomInfoWithRateLimit(self, room: LiveRoom):

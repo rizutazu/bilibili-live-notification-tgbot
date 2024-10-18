@@ -34,7 +34,8 @@ class LiveRoom():
                 "cover": "https://pbs.twimg.com/media/GZmju6EaIAAT1C0?format=jpg&name=medium",
                 "parent_area_name": "父分區" + biede,
                 "area_name": "子分區" + biede,
-                "uid": 114514
+                "uid": 114514,
+                "live_start_time": datetime.now().timestamp()
             },
             "anchor_info": {
                 "base_info": {

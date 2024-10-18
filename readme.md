@@ -13,7 +13,7 @@ Telegram bilibili直播開播提醒bot
 
 - 自動刪除無效的關注直播間
 
-- 記錄開播時間、結束時間和直播時長（如果可用）
+- 記錄開播時間、結束時間和直播時長
  
 <p align="center">
 <img src="assets/image.png" alt="" width="50%"><img src="assets/image-1.png" alt="" width="50%">
@@ -29,7 +29,7 @@ Telegram bilibili直播開播提醒bot
 [❓]未知: 直播間 1919
 ```
 
-標記為未知的是直播間加入了提醒列表，但還未進行過一次
+標記為未知的是直播間加入了提醒列表，但還未進行過任何一次狀態查詢。
 
 除此之外，bot也提供了一些其他命令，詳見help：
 
