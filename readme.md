@@ -1,9 +1,49 @@
 *：你覺得你是？？的腦殘粉嗎*
+
 *「我覺得我是」*
 
 # Bilibili Live Notification Bot
 
 Telegram bilibili直播開播提醒bot 
+
+
+## 功能
+
+- 開播提醒，提示當前直播狀態，標題/分區發生變化時自動更新
+
+- 自動刪除無效的關注直播間
+
+- 記錄開播時間、結束時間和直播時長（如果可用）
+ 
+<p align="center">
+<img src="assets/image.png" alt="" width="50%"><img src="assets/image-1.png" alt="" width="50%">
+</p>
+
+- 列出提醒列表，樣式如下：
+
+`/list`：
+
+```
+[🟠]未開播: 直播間 114: (這裡是主播名稱)
+[🟢]直播中: 直播間 514: (這裡是主播名稱)
+[❓]未知: 直播間 1919
+```
+
+標記為未知的是直播間加入了提醒列表，但還未進行過一次
+
+除此之外，bot也提供了一些其他命令，詳見help：
+
+`/start`：
+
+```
+Bilibili live notification bot 已啟動。
+輸入 /subscribe room_id 以添加提醒的直播間；
+輸入 /list 以列出加入提醒列表的直播間；
+輸入 /unsubscribe room_id 以將直播間移出提醒列表；
+輸入 /interval 以顯示輪詢完整提醒列表的間隔，
+輸入 /interval number_int 以修改這一間隔；
+輸入 /echo 以查看bot是否在運行
+```
 
 ## 安裝&&部署
 
@@ -94,23 +134,3 @@ Telegram bilibili直播開播提醒bot
 5. 啟動
 
 `python -m bili_live_noti_bot`
-
-## 功能
-
-- 開播提醒，提示當前直播狀態，標題/分區發生變化時自動更新
-
-- 記錄開播時間、結束時間和直播時長（如果可用）
-<p align="center">
-<img src="assets/image.png" alt="" width="50%"><img src="assets/image-1.png" alt="" width="50%">
-</p>
-
-除了在啟動時配置的參數，bot也提供了一些有用的命令，可用於修改部分參數：
-
-```
-輸入 /subscribe room_id 以添加提醒的直播間；
-輸入 /list 以列出加入提醒列表的直播間；
-輸入 /unsubscribe room_id 以將直播間移出提醒列表；
-輸入 /interval 以顯示輪詢完整提醒列表的間隔，
-輸入 /interval number_int 以修改這一間隔；
-輸入 /echo 以查看bot是否在運行
-```
