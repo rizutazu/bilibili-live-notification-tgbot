@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+
 _config_json_data = None
 _config_json_name = "config.json"
 _file_not_found = False
@@ -14,7 +15,7 @@ def _get_json_value(key: str):
     try:
         with open(_config_json_name, "r") as f:
             _config_json_data = json.load(f)
-        return _config_json_data[key]
+        return _config_json_data.get(key)
     except FileNotFoundError:
         _file_not_found = True
         return None
@@ -30,10 +31,10 @@ def _get_config(key: str):
     return value
 
 def getTGBotToken() -> str:
-    return _get_config("tgbot_token")
+    return str(_get_config("tgbot_token"))
 
 def getTGChatID() -> str:
-    return _get_config("tg_chat_id")
+    return str(_get_config("tg_chat_id"))
 
 def getSubscribeRooms() -> list:
     lst = _get_config("subscribed_rooms")
@@ -42,7 +43,7 @@ def getSubscribeRooms() -> list:
     return lst
 
 def getTimezone() -> str:
-    return _get_config("timezone")
+    return str(_get_config("timezone"))
 
 def getPollInterval() -> int:
     return int(_get_config("poll_interval"))

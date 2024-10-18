@@ -50,5 +50,5 @@ class LiveRoom():
                 }
             }
         }
-        print(f"Dummy LiveRoom: live_status: {live_status} title: {title}")
+        print(f"Dummy LiveRoom: live_status: {live_status} title: {title} specified time: {self.start_time}")
         return data

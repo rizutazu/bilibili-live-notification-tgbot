@@ -2,6 +2,7 @@ from __future__ import annotations
 from .liveroom import LiveRoom
 from telegram import Message
 from datetime import datetime
+from pytz import utc
 
 class RoomRecord():
 
@@ -31,7 +32,7 @@ class RoomRecord():
         self.cover_url = result["room_info"]["cover"]
         self.parent_area_name = result["room_info"]["parent_area_name"]
         self.area_name = result["room_info"]["area_name"]
-        self.start_time = datetime.fromtimestamp(result["room_info"]["live_start_time"])
+        self.start_time = datetime.fromtimestamp(result["room_info"]["live_start_time"], tz=utc)
 
     def hasUpdate(self, new_record: RoomRecord) -> bool:
 

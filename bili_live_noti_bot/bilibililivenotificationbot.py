@@ -7,7 +7,7 @@ from aiolimiter import AsyncLimiter
 from asyncio.locks import Lock
 from asyncio import sleep
 from datetime import datetime
-from pytz import timezone
+from pytz import timezone, utc
 import logging
 import os
 
@@ -205,7 +205,7 @@ class BilibiliLiveNotificationBot():
         option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
 
         if record.start_time != None:
-            text += f"開始時間： {self.timezone.localize(record.start_time).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
+            text += f"開始時間： {record.start_time.astimezone(self.timezone).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
         
         text = escape_markdown(text, 2, "text_link")
 
@@ -222,7 +222,7 @@ class BilibiliLiveNotificationBot():
             option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
 
             if record.start_time != None:
-                text += f"開始時間： {self.timezone.localize(record.start_time).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
+                text += f"開始時間： {record.start_time.astimezone(self.timezone).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
 
             text = escape_markdown(text, 2, "text_link")
 
@@ -242,10 +242,10 @@ class BilibiliLiveNotificationBot():
             option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
             
             if record.start_time != None:
-                timenow = datetime.now()
+                timenow = datetime.now().astimezone(utc)
                 time_delta_str = str(timenow - record.start_time).split(".")[0]
-                text += f"開始時間： {self.timezone.localize(record.start_time).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
-                text += f"結束時間： {self.timezone.localize(timenow).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
+                text += f"開始時間： {record.start_time.astimezone(self.timezone).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
+                text += f"結束時間： {timenow.astimezone(self.timezone).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
                 text += f"持續時間： {time_delta_str}\n"
 
             text = escape_markdown(text, 2, "text_link")
