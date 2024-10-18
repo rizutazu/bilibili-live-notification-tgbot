@@ -17,7 +17,9 @@ Telegram bilibili直播開播提醒bot
 
 3. 啟動container
 
-`sudo docker-compose up -d`
+如果使用`config.json`： `sudo docker-compose up -d`
+
+如果使用`env_file`： `sudo docker-compose --env-file ./env_file up -d`
 
 ### 直接部署在本地。
 
