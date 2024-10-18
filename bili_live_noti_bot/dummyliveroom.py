@@ -10,8 +10,9 @@ from datetime import datetime
         [20, 30): 直播中, 標題切換為 v2, 還有別的？ 
 '''
 class LiveRoom():
-    def __init__(self, room_id: int, credential) -> None:
+    def __init__(self, room_id: int) -> None:
         self.room_id: str = str(room_id)
+        self.start_time: float = 0
 
     async def get_room_info(self) -> dict:
         second_now = datetime.now().second % 30
@@ -19,14 +20,20 @@ class LiveRoom():
             live_status = 0
             title = ""
             biede = ""
+            self.start_time = 0
         elif second_now >= 10 and second_now < 20:
             live_status = 1
             title = "title " + self.room_id + " title v1"
             biede = ""
+            if self.start_time == 0:
+                self.start_time = datetime.now().timestamp() - 10
         else:
             live_status = 1
             title = "title " + self.room_id + " title v2"
             biede = "???"
+            if self.start_time == 0:
+                self.start_time = datetime.now().timestamp() - 10
+
         data = {
             "room_info": {
                 "live_status": live_status,
@@ -35,7 +42,7 @@ class LiveRoom():
                 "parent_area_name": "父分區" + biede,
                 "area_name": "子分區" + biede,
                 "uid": 114514,
-                "live_start_time": datetime.now().timestamp()
+                "live_start_time": self.start_time
             },
             "anchor_info": {
                 "base_info": {

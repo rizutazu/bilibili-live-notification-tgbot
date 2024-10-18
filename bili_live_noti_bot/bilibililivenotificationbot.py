@@ -9,9 +9,14 @@ from asyncio import sleep
 from datetime import datetime
 from pytz import timezone
 import logging
+import os
 
-# from dummyliveroom import LiveRoom
-from .liveroom import LiveRoom, ResponseCodeException
+from .liveroom import ResponseCodeException
+
+if os.getenv("BILILIVENOTIBOT_TEST") != None:
+    from .dummyliveroom import LiveRoom
+else:
+    from .liveroom import LiveRoom
 
 
 from .tinyapplication import TinyApplication
@@ -141,6 +146,7 @@ class BilibiliLiveNotificationBot():
                 if new_record.is_living:            # 還在直播，檢查更新
                     if current_record.hasUpdate(new_record):
                         logger.info(f"Room {room_id}: update sent message")
+                        new_record.message_sent = current_record.message_sent
                         current_record.message_sent = await self.modifySentLiveMessage(new_record)
                         current_record.update(new_record)
                 else:                               # 沒在播了
@@ -160,8 +166,13 @@ class BilibiliLiveNotificationBot():
             # telegram network error
             logger.warning("Telegram NetworkError, will resume after 5s")
             await sleep(5)
+        # 什麼情況
         except Exception as e:
             logger.error(f"Unexpected error at updateRoomInformation(): {type(e).__name__}: {str(e)}")
+
+            if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
+                await self.sendDebugMessage(f"Unexpected error at updateRoomInformation(): {type(e).__name__}: {str(e)}")
+
 
     # rate limit: 50/1min
     async def getRoomInfoWithRateLimit(self, room: LiveRoom):
@@ -173,7 +184,7 @@ class BilibiliLiveNotificationBot():
         # 因為好看
         self.poll_interval = sleep_time
 
-    async def sendMessage(self, message: str):
+    async def sendDebugMessage(self, message: str):
 
         if message == "":
             await self.tg_bot.send_message(self.chat_id, "test message")

@@ -75,9 +75,7 @@ Bilibili live notification bot 已啟動。
 
 3. 安裝依賴：
 
-`pip install --no-deps -r requirements.txt`
-
-*不帶`--no-deps` 參數會有dependency conflict，但好像還是能用 ~~just do it~~* 
+`pip install -r requirements.txt`
 
 4. 配置參數： 
 <a name="config"></a>

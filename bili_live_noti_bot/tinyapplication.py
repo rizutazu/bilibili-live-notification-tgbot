@@ -3,6 +3,7 @@ from asyncio import Queue, sleep
 from telegram import Bot, Message, MessageEntity, Update
 from telegram.error import NetworkError
 import logging
+import os
 
 logger = logging.getLogger("TinyApplication")
 
@@ -66,3 +67,10 @@ class TinyApplication():
                     await self.updater.shutdown()
                 await sleep(5)
                 continue
+
+            # 什麼情況
+            except Exception as e:
+                logger.error(f"Unexpected error at TinyApplication().start(): {type(e).__name__}: {str(e)}")
+                if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
+                    await self.owner.sendDebugMessage(f"Unexpected error at TinyApplication().start(): {type(e).__name__}: {str(e)}")
+

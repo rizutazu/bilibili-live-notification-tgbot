@@ -50,6 +50,7 @@ class RoomRecord():
         self.cover_url = new_record.cover_url 
         self.parent_area_name = new_record.parent_area_name 
         self.area_name = new_record.area_name
+        self.start_time = new_record.start_time
 
     def clear(self):    # 清空狀態
 
