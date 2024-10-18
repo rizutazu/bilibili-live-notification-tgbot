@@ -1,0 +1,8 @@
+version: '3'
+services:
+  bililivenotibot:
+    build: .
+    volumes:
+      - .:/usr/src/bilibili-live-notification-tgbot
+    env_file:
+      - ./env_file

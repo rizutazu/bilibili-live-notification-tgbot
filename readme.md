@@ -7,15 +7,38 @@ Telegram bilibili直播開播提醒bot
 
 ## 安裝&&部署
 
+### 使用docker-compose
+
 1. clone本倉庫
 
-2. 安裝依賴：
+2. 配置參數。
+
+參考下方的[第四節](#config)，複製出一份`config.json`，或者，如果使用environment variables的話，複製出一份`env_file.example`，重命名為`env_file`，並添加配置。
+
+3. 啟動container
+
+`sudo docker-compose up -d`
+
+### 直接部署在本地。
+
+需要使用python 3.12。
+
+1. clone本倉庫
+
+2. 創建venv並啟用：
+
+`python -m venv .env`
+
+`source .env/bin/activate`
+
+3. 安裝依賴：
 
 `pip install --no-deps -r requirements.txt`
 
 *不帶`--no-deps` 參數會有dependency conflict，但好像還是能用 ~~just do it~~* 
 
-3. 配置參數：
+4. 配置參數： 
+<a name="config"></a>
 
 可以使用`config.json`，或是environment variables。**當environment variables條目存在時，總是優先於`config.json`而生效。**
 
@@ -54,7 +77,7 @@ Telegram bilibili直播開播提醒bot
 
 - environment variables
 
-格式為`BILILIVENOTIBOT_` + 上面json中所有出現字段的大寫，如下：
+參考`env_file.example`。格式為`BILILIVENOTIBOT_` + 上面json中所有出現字段的大寫，如下：
 
 `BILILIVENOTIBOT_TGBOT_TOKEN`
 
@@ -66,7 +89,7 @@ Telegram bilibili直播開播提醒bot
 
 `BILILIVENOTIBOT_SUBSCRIBED_ROOMS`  (多個直播間用`,`分隔開)
 
-4. 啟動
+5. 啟動
 
 `python -m bili_live_noti_bot`
 
