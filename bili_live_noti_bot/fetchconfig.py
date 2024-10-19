@@ -2,6 +2,12 @@ import json
 import os
 import sys
 
+"""
+    fetchconfig.py: 獲取配置
+    不過既然config.json和env_vals都是用文件指定的，那這麼做的意義是什麼呢:thinking:
+"""
+
+
 _config_json_data = None
 _config_json_name = "config.json"
 _file_not_found = False
@@ -25,9 +31,10 @@ def _get_config(key: str):
     value = os.getenv(env_key)
     if value == None:
         value = _get_json_value(key)
-    if value == None:
-        sys.stderr.write(f"Error: {key} is not specified\n")
-        exit(1)
+        assert value is not None, f"Error: {key} is not specified\n"
+        print(f"Read {key} from json")
+    else:
+        print(f"Read {key} from env")
     return value
 
 def getTGBotToken() -> str:

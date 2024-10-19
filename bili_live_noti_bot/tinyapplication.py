@@ -1,25 +1,50 @@
+from __future__ import annotations
 from telegram.ext import Updater
 from asyncio import Queue, sleep
-from telegram import Bot, Message, MessageEntity, Update
-from telegram.error import NetworkError
+from telegram import Bot, Message, MessageEntity, Update, BotCommand
+from telegram.error import TimedOut
 import logging
 import os
+import re
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .bilibililivenotificationbot import BilibiliLiveNotificationBot
 
 logger = logging.getLogger("TinyApplication")
 
 class TinyApplication():
+    
+    """
+                    TinyApplication Class
+            不是，為什麼Telegram.ext.Application沒有方便的async啟動函數啊，
+            然後它的doc我怎麼看不懂啊（我太菜了.jpg
+            然後就自己寫了個簡單的，之類的？
+    """
+
     def __init__(self, tg_bot: Bot, owner) -> None:
         self.update_queue: Queue = Queue()
         self.updater = Updater(tg_bot, self.update_queue)
-        self.command_handlers: dict[str, callable] = {}
-        self.owner = owner
+        self.command_handlers: dict[str, CommandHandler] = {}
+        self.owner: BilibiliLiveNotificationBot = owner
 
-    def addCommandHandler(self, command: str, handler: callable):
-        self.command_handlers[command] = handler
+    def addCommandHandlers(self, command_handlers: list[CommandHandler]):
+
+        """
+            添加CommandHandler對象
+        """
+
+        for ch in command_handlers:
+            self.command_handlers[ch.command] = ch
 
     def parseCommand(self, message: Message) -> tuple[str, str]:
+
+        """
+            解析接收的message，分解為command和argument
+            不是command類的message，text內容會全塞進argument
+        """
+
         types = [entity.type for entity in message.entities]
-        # print(types)
         if MessageEntity.BOT_COMMAND in types:
             idx = message.text.find(" ")
             if idx == -1:
@@ -33,6 +58,13 @@ class TinyApplication():
             return ("", message.text)
 
     async def handleUpdate(self, update: Update):
+
+        """
+            處理接收到的bot update
+            不是message類型，或者來源不是配置裡指定的chat_id均會被忽略
+            我好像沒打算把bot放群裡面？
+        """
+
         if update.message == None:
             # update without effective message attribute will be ignored
             return
@@ -43,12 +75,36 @@ class TinyApplication():
         logger.info(f"New message: text={update.message.text}")
         
         command, argument = self.parseCommand(update.message)
-        handler = self.command_handlers.get(command)
-        if handler != None:
+        command_handler = self.command_handlers.get(command)
+        if command_handler != None:
             logger.info(f"Run /{command} command handler")
-            await handler(update, self, argument)
+            await command_handler.handle(update, self, argument)
 
     async def start(self):
+
+        """
+            啟動bot update監聽
+            帶異常自動恢復（可用性存疑）
+        """
+
+        while True:
+            try:
+                bot_commands = []
+                for command, command_handler in self.command_handlers.items():
+                    bot_commands.append(command_handler.getBotCommand())
+                    logger.info(f"Add /{command} command handler")
+                await self.updater.bot.setMyCommands(bot_commands)
+                break
+            except TimedOut:
+                logger.warning(f"TimedOut exception when setting bot command, will retry after 5s")
+                await sleep(5)
+            # 什麼情況
+            except Exception as e:
+                logger.error(f"Unexpected error when setting bot commands: {type(e).__name__}: {str(e)}")
+                if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
+                    await self.owner.sendDebugMessage(f"Unexpected error when setting bot commands: {type(e).__name__}: {str(e)}")
+                exit(1)
+
         while True:
             try:
                 if not self.updater._initialized:
@@ -59,18 +115,42 @@ class TinyApplication():
                 while True:
                     update = await self.update_queue.get()
                     await self.handleUpdate(update)
-            except NetworkError:
-                logger.warning("Telegram NetworkError, will shutdown and restart after 5s")
+            except TimedOut:
+                logger.warning("TimedOut exception when polling updates, will shutdown and restart after 5s")
                 if self.updater.running:
                     await self.updater.stop()
                 if self.updater._initialized:
                     await self.updater.shutdown()
                 await sleep(5)
                 continue
-
             # 什麼情況
             except Exception as e:
-                logger.error(f"Unexpected error at TinyApplication().start(): {type(e).__name__}: {str(e)}")
+                logger.error(f"Unexpected error when polling updates: {type(e).__name__}: {str(e)}")
                 if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
-                    await self.owner.sendDebugMessage(f"Unexpected error at TinyApplication().start(): {type(e).__name__}: {str(e)}")
+                    await self.owner.sendDebugMessage(f"Unexpected error when polling updates: {type(e).__name__}: {str(e)}")
+                exit(1)
 
+class CommandHandler():
+
+    def __init__(self, command: str, description: str, callback: callable) -> None:
+
+        # from telegram.ext.CommandHandler.__init__
+        if not re.match(r"^[\da-z_]{1,32}$", command):
+            raise ValueError(f"Command `/{command}` is not a valid bot command")
+        
+        self.command: str = command
+        self.description: str = description
+        self.callback: callable = callback
+
+    def getBotCommand(self) -> BotCommand:
+
+        return BotCommand(self.command, self.description)
+    
+    async def handle(self, update: Update, caller: TinyApplication, argument: str):
+
+        """
+            callback函數的signature是：
+            `def callback(update: Update, caller: TinyApplication, argument: str)`
+        """
+
+        await self.callback(update, caller, argument)

@@ -3,6 +3,10 @@ from .bilibililivenotificationbot import BilibiliLiveNotificationBot
 from asyncio import gather, run
 import os
 
+"""
+    __main__.py: fetch config and start bot
+"""
+
 async def main():
 
     token = getTGBotToken()
@@ -14,6 +18,7 @@ async def main():
     bot = BilibiliLiveNotificationBot(token, chat_id, timezone, interval)
 
     if os.getenv("BILILIVENOTIBOT_TEST") != None:
+        bot.poll_interval = 5
         await bot.subscribeRooms(["114"])
     else:
         await bot.subscribeRooms(sub_lst)

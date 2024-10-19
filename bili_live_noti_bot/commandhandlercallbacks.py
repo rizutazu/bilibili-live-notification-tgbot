@@ -2,7 +2,12 @@ from .tinyapplication import TinyApplication
 from telegram import Update
 from telegram.helpers import escape_markdown
 
+"""
+    handlefunctions.py: sets of CommandHandler callback functions
+"""
+
 async def handleStart(update: Update, caller: TinyApplication, argument: str):
+
     message = """Bilibili live notification bot 已啟動。
 輸入 /subscribe room_id 以添加提醒的直播間；
 輸入 /list 以列出加入提醒列表的直播間；
@@ -14,6 +19,7 @@ async def handleStart(update: Update, caller: TinyApplication, argument: str):
     await update.message.reply_text(message)
 
 async def handleList(update: Update, caller: TinyApplication, argument: str):
+
     text = ""
 
     room_info = await caller.owner.getSubscribedRooms()
@@ -40,6 +46,7 @@ async def handleList(update: Update, caller: TinyApplication, argument: str):
     await update.message.reply_text(text, parse_mode="MarkdownV2", disable_web_page_preview=True)
 
 async def handleSubscribe(update: Update, caller: TinyApplication, argument: str):
+
     if not argument.isnumeric():
         await update.message.reply_text("請給出有效的直播間號")
     else:
@@ -52,6 +59,7 @@ async def handleSubscribe(update: Update, caller: TinyApplication, argument: str
             await update.message.reply_text(f"已添加直播間 {argument}")
 
 async def handleUnsubscribe(update: Update, caller: TinyApplication, argument: str):
+
     if not argument.isnumeric():
         await update.message.reply_text("請給出有效的直播間號")
     else:
@@ -64,22 +72,24 @@ async def handleUnsubscribe(update: Update, caller: TinyApplication, argument: s
             await update.message.reply_text(f"已移除直播間 {argument}")
 
 async def handleEcho(update: Update, caller: TinyApplication, argument: str):
+
     text = argument
     if argument == "":
         text = "Bot is running"
     await update.message.reply_text(text)
 
 async def handleInterval(update: Update, caller: TinyApplication, argument: str):
-    if argument == "":
-        old_time = caller.owner.poll_interval
-        await update.message.reply_text(f"當前的輪詢間隔為 {old_time}s")
+
+    old_interval = caller.owner.poll_interval
+
+    if argument == "":  
+        await update.message.reply_text(f"當前的輪詢間隔為 {old_interval}s")
     elif not argument.isnumeric():
         await update.message.reply_text("請給出有效的輪詢間隔")
     else:
-        new_time = int(argument)
-        old_time = caller.owner.poll_interval
-        if old_time == new_time:
+        new_interval = int(argument)
+        if old_interval == new_interval:
             await update.message.reply_text("輪詢間隔未發生變化")
         else:
-            caller.owner.poll_interval = new_time
-            await update.message.reply_text(f"已修改輪詢間隔： {old_time}s ==> {new_time}s")
+            caller.owner.poll_interval = new_interval
+            await update.message.reply_text(f"已修改輪詢間隔： {old_interval}s ==> {new_interval}s")

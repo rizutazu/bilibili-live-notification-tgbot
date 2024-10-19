@@ -1,8 +1,8 @@
 from __future__ import annotations
-from telegram import Bot, Message, BotCommand, MessageEntity, LinkPreviewOptions
+from telegram import Bot, Message, MessageEntity, LinkPreviewOptions
 from telegram.request import HTTPXRequest
 from telegram.helpers import escape_markdown
-from telegram.error import NetworkError
+from telegram.error import TimedOut, BadRequest
 from aiolimiter import AsyncLimiter
 from asyncio.locks import Lock
 from asyncio import sleep
@@ -13,21 +13,29 @@ import os
 
 from .liveroom import ResponseCodeException
 
+# test flag: use DummyLiveRoom to examine the functionality
 if os.getenv("BILILIVENOTIBOT_TEST") != None:
     from .dummyliveroom import LiveRoom
 else:
     from .liveroom import LiveRoom
 
-
-from .tinyapplication import TinyApplication
+from .tinyapplication import TinyApplication, CommandHandler
 from .roomrecord import RoomRecord
-from .commandhandler import *
+from .commandhandlercallbacks import *
 
 
 logger = logging.getLogger("BilibiliLiveNotificationBot")
 
 
+
 class BilibiliLiveNotificationBot():
+    """
+                    BilibiliLiveNotificationBot Class
+            bot的主體實現，大概。
+            獲取並記錄直播間信息、添加刪除直播間、發送消息，都發生在這裡。
+            而bot接收command消息、處理command動作，則由 `TinyApplication` 進行。
+            很是懷疑Lock()有沒有用。
+    """
 
     def __init__(self, tg_bot_token: str, tg_chat_id: str, 
                     timezone_str: str, poll_interval: str) -> None:
@@ -48,9 +56,14 @@ class BilibiliLiveNotificationBot():
         self.rate_limiter = AsyncLimiter(50)    # rate: 50 / 1min
         self.poll_interval: int = poll_interval
 
+        # specify the display timezone of live_start_time 
         self.timezone = timezone(timezone_str)
 
     async def subscribeRooms(self, rooms: list[str]):
+
+        """
+            添加關注的直播間
+        """
 
         await self.config_lock.acquire()
         rooms = [room for room in rooms if room.isnumeric()]
@@ -60,7 +73,7 @@ class BilibiliLiveNotificationBot():
             if self.room_records.get(room_id) == None:
                 self.room_records[room_id] = RoomRecord(room_id)
             if self.room_records[room_id].room == None:
-                self.room_records[room_id].room = LiveRoom(int(room_id))
+                self.room_records[room_id].room = LiveRoom(room_id)
         self.config_lock.release()
 
         if rooms != []:
@@ -68,6 +81,10 @@ class BilibiliLiveNotificationBot():
 
     async def unsubscribeRooms(self, rooms: list[str]):
         
+        """
+            刪除關注的直播間
+        """
+
         await self.config_lock.acquire()
         for room_id in rooms:
             if room_id in self.subscribed_rooms:
@@ -78,6 +95,10 @@ class BilibiliLiveNotificationBot():
         logger.info(f"Unsubscribe rooms: {rooms}")
 
     async def getSubscribedRooms(self) -> dict[str, dict]:
+
+        """
+            獲取關注的直播間的列表，以及開播狀態
+        """
 
         await self.config_lock.acquire()
         ret = {}
@@ -92,6 +113,10 @@ class BilibiliLiveNotificationBot():
 
     async def deleteInvalidRooms(self):
         
+        """
+            刪掉標記為invalid的直播間
+        """
+
         await sleep(0)
         await self.config_lock.acquire()
         mark_delete = [room_id for room_id, record in self.room_records.items() if not record.is_valid]
@@ -103,6 +128,13 @@ class BilibiliLiveNotificationBot():
             logger.info(f"Delete invalid rooms: {mark_delete}")
 
     async def updateRoomInformation(self, room_id: str):
+
+        """
+            更新直播間信息
+            使用 `LiveRecord` 記錄直播間有關狀態，包括開播時間、標題和分區等
+            根據記錄的狀態判斷後續動作：發送開播消息/更新發送的消息/標記直播結束
+            `LiveRecord` 只在消息發送成功後才進行更新，不知道有沒有意義
+        """
 
         await sleep(0)
 
@@ -132,59 +164,72 @@ class BilibiliLiveNotificationBot():
             # check diff: 檢查信息變動
             current_record = self.room_records[room_id]
 
-            if current_record.is_living != True:    # 啟動bot後的第一個狀態/false
-                if new_record.is_living:            # 第一次檢查 --> living, 開始直播時間未知
+            if current_record.is_living != True:    # 啟動bot後的第一個狀態/not living
+                if new_record.is_living:            # 第一狀態/not living --> living, 發消息
                     logger.info(f"Room {room_id}: send live start message")
                     if current_record.message_sent == None:
                         current_record.message_sent = await self.sendLiveStartMessage(new_record)
                     current_record.update(new_record)
                     current_record.is_living = True
-                else:                               
+                else:                               # 第一狀態/not living --> not living，更新信息
                     current_record.is_living = False
                     current_record.update(new_record)
-            else:          # living -> 檢查下一狀態
-                if new_record.is_living:            # 還在直播，檢查更新
+            else:                                   # living -> 檢查下一狀態
+                if new_record.is_living:            # 還在直播，檢查狀態更新
                     if current_record.hasUpdate(new_record):
                         logger.info(f"Room {room_id}: update sent message")
                         new_record.message_sent = current_record.message_sent
                         current_record.message_sent = await self.modifySentLiveMessage(new_record)
                         current_record.update(new_record)
-                else:                               # 沒在播了
+                else:                               # 沒在播了，清空狀態
                     logger.info(f"Room {room_id}: live end, mark sent message")
-                    await self.markSentLiveMessageAsEnd(current_record)
+                    await self.markSentLiveMessageAsEnd(current_record) # 避免使用new_record，因為直播結束後的response裡沒有開播時間
                     current_record.is_living = False
                     current_record.clear()
                     
         except ResponseCodeException:
+            # live room does not exist
             logger.info(f"Room {room_id}: bilibili api ResponseCodeException, mark as invalid")
             self.room_records[room_id].is_valid = False
             await self.sendWarningMessage(f"直播間 {room_id} 不存在，已禁用")
         except TimeoutError:
+            # bilibili api timeout
             logger.warning(f"bilibili api TimeoutError, will resume after 5s")
             await sleep(5)
-        except NetworkError:
-            # telegram network error
-            logger.warning("Telegram NetworkError, will resume after 5s")
+        except TimedOut:
+            # telegram timeout error
+            logger.warning("Telegram TimedOut exception, will resume after 5s")
             await sleep(5)
+        except BadRequest as e:
+            if str(e) == "Chat not found":
+                logger.warning("Cannot find specified chat, maybe you forget to send /start message?")
+                await sleep(10)
+            else:
+                logger.error(f"Bad request exception occurred when updating room information: {type(e).__name__}: {str(e)}")
+                exit(1)
         # 什麼情況
         except Exception as e:
-            logger.error(f"Unexpected error at updateRoomInformation(): {type(e).__name__}: {str(e)}")
+            logger.error(f"Unexpected error when updating room information: {type(e).__name__}: {str(e)}")
 
             if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
-                await self.sendDebugMessage(f"Unexpected error at updateRoomInformation(): {type(e).__name__}: {str(e)}")
-
+                await self.sendDebugMessage(f"Unexpected error when updating room information: {type(e).__name__}: {str(e)}")
+            exit(1)
 
     # rate limit: 50/1min
     async def getRoomInfoWithRateLimit(self, room: LiveRoom):
 
+        """
+            我不知道有沒有這個rate limit啊，就當它有吧
+        """
+
         await self.rate_limiter.acquire()
         return await room.get_room_info()
 
-    async def setSleepTime(self, sleep_time: int):
-        # 因為好看
-        self.poll_interval = sleep_time
-
     async def sendDebugMessage(self, message: str):
+
+        """
+            sendDebugMessage（捧讀
+        """
 
         if message == "":
             await self.tg_bot.send_message(self.chat_id, "test message")
@@ -193,10 +238,19 @@ class BilibiliLiveNotificationBot():
   
     async def sendWarningMessage(self, message: str=""):
 
+        """
+            sendWarningMessage（捧讀
+        """
+
         text = f"Warning: {message}"
         await self.tg_bot.send_message(self.chat_id, text)
 
     async def sendLiveStartMessage(self, record: RoomRecord) -> Message:
+
+        """
+            直播開始力
+            返回發送的消息，用於後續更新/標記結束
+        """
 
         text = f"[🟢]{record.uname}: {record.room_title}\n"
         text += f"分區: {record.parent_area_name}-{record.area_name}\n"
@@ -212,6 +266,10 @@ class BilibiliLiveNotificationBot():
         return await self.tg_bot.send_message(self.chat_id, text=text, entities=[entity], link_preview_options=option)
 
     async def modifySentLiveMessage(self, record: RoomRecord):
+
+        """
+            更新發送的消息
+        """
 
         if record.message_sent != None:
 
@@ -232,6 +290,10 @@ class BilibiliLiveNotificationBot():
             return None
 
     async def markSentLiveMessageAsEnd(self, record: RoomRecord):
+
+        """
+            標記結束
+        """
 
         if record.message_sent != None:
             # it is ok to modinfy a deleted message
@@ -254,26 +316,28 @@ class BilibiliLiveNotificationBot():
  
     async def appStart(self):
 
-        bot_commands = [
-            BotCommand("start", "啟動bot，以及顯示help"),
-            BotCommand("list", "列出提醒的直播間以及記錄的信息"),
-            BotCommand("subscribe", "添加提醒的直播間"),
-            BotCommand("unsubscribe", "移出提醒列表"),
-            BotCommand("interval", "顯示，或修改對完整的提醒列表的輪詢的間隔"),
-            BotCommand("echo", "還活著嗎")
-        ]
-        await self.tg_bot.set_my_commands(bot_commands)
+        """
+            receive and handle command message
+        """
 
-        self.app.addCommandHandler("start", handleStart)
-        self.app.addCommandHandler("list", handleList)
-        self.app.addCommandHandler("subscribe", handleSubscribe)
-        self.app.addCommandHandler("unsubscribe", handleUnsubscribe)
-        self.app.addCommandHandler("interval", handleInterval)
-        self.app.addCommandHandler("echo", handleEcho)
+        command_handlers = [
+            CommandHandler("start", "啟動bot，以及顯示help", handleStart),
+            CommandHandler("list", "列出提醒的直播間以及記錄的信息", handleList),
+            CommandHandler("subscribe", "添加提醒的直播間", handleSubscribe),
+            CommandHandler("unsubscribe", "移出提醒列表", handleUnsubscribe),
+            CommandHandler("interval", "顯示，或修改對完整的提醒列表的輪詢的間隔", handleInterval),
+            CommandHandler("echo", "還活著嗎", handleEcho)
+        ]
+
+        self.app.addCommandHandlers(command_handlers)
 
         await self.app.start()
 
     async def subscribeStart(self):
+
+        """
+            輪詢更新直播間狀態
+        """
 
         logger.info("Start subscribing live rooms")
         while True:

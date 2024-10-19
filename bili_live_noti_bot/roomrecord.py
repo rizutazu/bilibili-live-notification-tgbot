@@ -6,7 +6,7 @@ from pytz import utc
 
 class RoomRecord():
 
-    def __init__(self, room_id) -> None:
+    def __init__(self, room_id: str) -> None:
 
         self.room_id: str = room_id                 # 直播間號
         self.uid: str = None                        # 主播在主站的uid
@@ -36,6 +36,7 @@ class RoomRecord():
 
     def hasUpdate(self, new_record: RoomRecord) -> bool:
 
+        # live_start_time 會在直播結束時變成0所以不考慮
         return not (self.room_title == new_record.room_title \
             and self.uname == new_record.uname \
             and self.cover_url == new_record.cover_url \

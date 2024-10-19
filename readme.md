@@ -45,6 +45,8 @@ Bilibili live notification bot 已啟動。
 輸入 /echo 以查看bot是否在運行
 ```
 
+**注意：你需要向bot發送`/start`後才能接收到提醒消息。**
+
 ## 安裝&&部署
 
 ### 使用docker-compose
@@ -96,7 +98,7 @@ Bilibili live notification bot 已啟動。
     // 這個是你的telegram bot的token
 
     "tg_chat_id": "114514",
-    // 這個是bot將會發送開播提醒的對象的chat id，私人用的話就填寫自己的那一串唯一數字id
+    // 這個是bot將會發送開播提醒的對象的chat id，就填寫自己tg的那一串唯一數字id好了，反正我也沒考慮過其他用法（劃掉
 
     "timezone": "Asia/Shanghai",
     // 用於指定開播提醒中時間的時區，可選參數列表參見pytz timezone list
