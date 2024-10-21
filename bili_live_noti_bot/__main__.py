@@ -15,15 +15,15 @@ async def main():
     interval = getPollInterval()
     sub_lst = getSubscribeRooms()
 
-    bot = BilibiliLiveNotificationBot(token, chat_id, timezone, interval)
+    bilibot = BilibiliLiveNotificationBot(token, chat_id, timezone, interval)
 
     if os.getenv("BILILIVENOTIBOT_TEST") != None:
-        bot.poll_interval = 5
-        await bot.subscribeRooms(["114"])
+        bilibot.poll_interval = 5
+        await bilibot.subscribeRooms(["114"])
     else:
-        await bot.subscribeRooms(sub_lst)
+        await bilibot.subscribeRooms(sub_lst)
 
-    await gather(bot.subscribeStart(), bot.appStart())
+    await gather(bilibot.subscribeStart(), bilibot.appStart())
 
 if __name__ == "__main__":
     run(main())

@@ -6,4 +6,4 @@ COPY . /usr/src/bilibili-live-notification-tgbot
 
 RUN python3 -m pip install --no-deps --no-cache-dir -r requirements.txt
 
-CMD python3 -m bili_live_noti_bot
+CMD python3 -u -m bili_live_noti_bot

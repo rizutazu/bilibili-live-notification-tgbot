@@ -3,6 +3,7 @@ from telegram import Bot, Message, MessageEntity, LinkPreviewOptions
 from telegram.request import HTTPXRequest
 from telegram.helpers import escape_markdown
 from telegram.error import TimedOut, BadRequest
+from httpx import TimeoutException
 from aiolimiter import AsyncLimiter
 from asyncio.locks import Lock
 from asyncio import sleep
@@ -192,7 +193,7 @@ class BilibiliLiveNotificationBot():
             logger.info(f"Room {room_id}: bilibili api ResponseCodeException, mark as invalid")
             self.room_records[room_id].is_valid = False
             await self.sendWarningMessage(f"直播間 {room_id} 不存在，已禁用")
-        except TimeoutError:
+        except TimeoutException:
             # bilibili api timeout
             logger.warning(f"bilibili api TimeoutError, will resume after 5s")
             await sleep(5)
@@ -232,9 +233,9 @@ class BilibiliLiveNotificationBot():
         """
 
         if message == "":
-            await self.tg_bot.send_message(self.chat_id, "test message")
+            await self.tg_bot.sendMessage(self.chat_id, "test message")
         else:
-            await self.tg_bot.send_message(self.chat_id, message)
+            await self.tg_bot.sendMessage(self.chat_id, message)
   
     async def sendWarningMessage(self, message: str=""):
 
@@ -243,7 +244,7 @@ class BilibiliLiveNotificationBot():
         """
 
         text = f"Warning: {message}"
-        await self.tg_bot.send_message(self.chat_id, text)
+        await self.tg_bot.sendMessage(self.chat_id, text)
 
     async def sendLiveStartMessage(self, record: RoomRecord) -> Message:
 
@@ -263,7 +264,7 @@ class BilibiliLiveNotificationBot():
         
         text = escape_markdown(text, 2, "text_link")
 
-        return await self.tg_bot.send_message(self.chat_id, text=text, entities=[entity], link_preview_options=option)
+        return await self.tg_bot.sendMessage(self.chat_id, text=text, entities=[entity], link_preview_options=option)
 
     async def modifySentLiveMessage(self, record: RoomRecord):
 
