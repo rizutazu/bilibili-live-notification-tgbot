@@ -81,7 +81,7 @@ class RoomRecord():
         """
             只更新與單次直播無關的
         """
-
+        self.is_living = new_record.is_living   # for /list return
         self.uid = new_record.uid
         self.uname = new_record.uname
 
