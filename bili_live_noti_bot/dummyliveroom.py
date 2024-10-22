@@ -26,14 +26,14 @@ class LiveRoom():
             self.start_time = 0
         elif second_now >= 10 and second_now < 20:
             live_status = 1
-            title = "title " + self.room_id + " title v" + str(second_now)
+            title = "rtitle" + self.room_id + "title v" + str(second_now)
             p_area = "父分區"
             area = "子分區"
             if self.start_time == 0:
                 self.start_time = datetime.now().timestamp() - 10
         else:
             live_status = 1
-            title = "title " + self.room_id + " title v" + str(second_now)
+            title = "rtitle" + self.room_id + "title v" + str(second_now)
             p_area = "父分區區"
             area = "子分區區"
             if self.start_time == 0:

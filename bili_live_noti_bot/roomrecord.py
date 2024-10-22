@@ -123,7 +123,7 @@ class RoomRecord():
 
         # add url
         text = escape_markdown(text, 2)
-        text = f"[{text}]({self.cover_url})\n"
+        text = f"[{text}](https://live.bilibili.com/{self.room_id})\n"
 
         # add time-related
         if self.start_time != None:

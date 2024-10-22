@@ -286,9 +286,7 @@ class BilibiliLiveNotificationBot():
         if record.message_sent != None:
 
             # it is ok to modify a deleted message
-            record.is_living = False # temporarily modify is_living so that it will generate right text
             text = record.generateMessageText(self.timezone, datetime.now().astimezone(utc))
-            record.is_living = True
             option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
 
             await record.message_sent.edit_text(text, parse_mode="MarkdownV2", link_preview_options=option)
