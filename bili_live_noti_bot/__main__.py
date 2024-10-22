@@ -13,12 +13,12 @@ async def main():
     chat_id = getTGChatID()
     timezone = getTimezone()
     interval = getPollInterval()
-    sub_lst = getSubscribeRooms()
+    sub_lst = getSubscribedRooms()
 
     bilibot = BilibiliLiveNotificationBot(token, chat_id, timezone, interval)
 
     if os.getenv("BILILIVENOTIBOT_TEST") != None:
-        bilibot.poll_interval = 5
+        bilibot.poll_interval = 3
         await bilibot.subscribeRooms(["114"])
     else:
         await bilibot.subscribeRooms(sub_lst)

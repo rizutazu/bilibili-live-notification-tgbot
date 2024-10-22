@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 
 """
     fetchconfig.py: 獲取配置
@@ -43,7 +42,7 @@ def getTGBotToken() -> str:
 def getTGChatID() -> str:
     return str(_get_config("tg_chat_id"))
 
-def getSubscribeRooms() -> list:
+def getSubscribedRooms() -> list:
     lst = _get_config("subscribed_rooms")
     if not isinstance(lst, list):
         return [i.strip() for i in lst.split(",")]

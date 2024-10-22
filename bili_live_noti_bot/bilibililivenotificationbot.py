@@ -1,7 +1,6 @@
 from __future__ import annotations
-from telegram import Bot, Message, MessageEntity, LinkPreviewOptions
+from telegram import Bot, Message, LinkPreviewOptions
 from telegram.request import HTTPXRequest
-from telegram.helpers import escape_markdown
 from telegram.error import TimedOut, BadRequest
 from httpx import TimeoutException
 from aiolimiter import AsyncLimiter
@@ -153,8 +152,8 @@ class BilibiliLiveNotificationBot():
             new_record = RoomRecord(room_id)
             new_record.parseResult(result)
 
-            # print(f"BilibiliLiveBot: {room_id}: {new_record.uname}: is_living: {new_record.is_living}")
             logger.info(f"Retrieved room info: room_id={room_id}, uname={new_record.uname}, is_living={new_record.is_living}")
+
             # update record && action
             # state change matrix of is_living:
             # state\input | F(沒直播)        | T(直播中)    |
@@ -163,30 +162,34 @@ class BilibiliLiveNotificationBot():
             # F/None      | F               | T,send msg  |
             # send msg: 發送開播提醒
             # check diff: 檢查信息變動
+            # 更新記錄的基本思路： new_record.inherit(current_record)，這樣，最新的迭代的記錄保存在new_record中
+            # 使用這個來發送消息，發送成功後再替代current_record
+            # 就是感覺不怎麼優雅
             current_record = self.room_records[room_id]
 
-            if current_record.is_living != True:    # 啟動bot後的第一個狀態/not living
-                if new_record.is_living:            # 第一狀態/not living --> living, 發消息
+            if current_record.is_living != True:        # 啟動bot後的第一個狀態/not living
+                if new_record.is_living:                # 第一狀態/not living --> living, 發消息
                     logger.info(f"Room {room_id}: send live start message")
-                    if current_record.message_sent == None:
-                        current_record.message_sent = await self.sendLiveStartMessage(new_record)
-                    current_record.update(new_record)
-                    current_record.is_living = True
-                else:                               # 第一狀態/not living --> not living，更新信息
-                    current_record.is_living = False
-                    current_record.update(new_record)
-            else:                                   # living -> 檢查下一狀態
-                if new_record.is_living:            # 還在直播，檢查狀態更新
+                    new_record.inherit(current_record)
+                    if new_record.message_sent == None:
+                        new_record.message_sent = await self.sendLiveStartMessage(new_record)
+                    # is_living == False時發的消息會不為None嗎，我不知道啊（
+                    self.room_records[room_id] = new_record
+                else:                                   # 第一狀態/not living --> not living，更新信息
+                    current_record.updateUserInfo(new_record)   # 只更新與用戶信息有關的條目
+            else:                                       # living -> 檢查下一狀態
+                if new_record.is_living:                # 還在直播，檢查狀態更新
                     if current_record.hasUpdate(new_record):
                         logger.info(f"Room {room_id}: update sent message")
-                        new_record.message_sent = current_record.message_sent
-                        current_record.message_sent = await self.modifySentLiveMessage(new_record)
-                        current_record.update(new_record)
-                else:                               # 沒在播了，清空狀態
+                        new_record.inherit(current_record)
+                        new_record.message_sent = await self.modifySentLiveMessage(new_record)
+                        self.room_records[room_id] = new_record
+                else:                                   # 沒在播了，清空狀態
                     logger.info(f"Room {room_id}: live end, mark sent message")
-                    await self.markSentLiveMessageAsEnd(current_record) # 避免使用new_record，因為直播結束後的response裡沒有開播時間
-                    current_record.is_living = False
-                    current_record.clear()
+                    new_record.inherit(current_record, inherit_time=True)
+                    await self.markSentLiveMessageAsEnd(new_record)
+                    new_record.clear()
+                    self.room_records[room_id] = new_record
                     
         except ResponseCodeException:
             # live room does not exist
@@ -253,18 +256,10 @@ class BilibiliLiveNotificationBot():
             返回發送的消息，用於後續更新/標記結束
         """
 
-        text = f"[🟢]{record.uname}: {record.room_title}\n"
-        text += f"分區: {record.parent_area_name}-{record.area_name}\n"
-
-        entity = MessageEntity(MessageEntity.TEXT_LINK, url=f"https://live.bilibili.com/{record.room_id}", offset=0, length=len(text))
+        text = record.generateMessageText(self.timezone)
         option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
 
-        if record.start_time != None:
-            text += f"開始時間： {record.start_time.astimezone(self.timezone).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
-        
-        text = escape_markdown(text, 2, "text_link")
-
-        return await self.tg_bot.sendMessage(self.chat_id, text=text, entities=[entity], link_preview_options=option)
+        return await self.tg_bot.sendMessage(self.chat_id, text=text, parse_mode="MarkdownV2", link_preview_options=option)
 
     async def modifySentLiveMessage(self, record: RoomRecord):
 
@@ -274,18 +269,10 @@ class BilibiliLiveNotificationBot():
 
         if record.message_sent != None:
 
-            text = f"[🟢]{record.uname}: {record.room_title}\n"
-            text += f"分區: {record.parent_area_name}-{record.area_name}\n"
-
-            entity = MessageEntity(MessageEntity.TEXT_LINK, url=f"https://live.bilibili.com/{record.room_id}", offset=0, length=len(text))
+            text = record.generateMessageText(self.timezone)
             option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
 
-            if record.start_time != None:
-                text += f"開始時間： {record.start_time.astimezone(self.timezone).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
-
-            text = escape_markdown(text, 2, "text_link")
-
-            return await record.message_sent.edit_text(text, entities=[entity], link_preview_options=option)
+            return await record.message_sent.edit_text(text, parse_mode="MarkdownV2", link_preview_options=option)
         
         else:
             return None
@@ -297,23 +284,14 @@ class BilibiliLiveNotificationBot():
         """
 
         if record.message_sent != None:
-            # it is ok to modinfy a deleted message
-            text = f"[🟠]{record.uname}: {record.room_title}\n"
-            text += f"分區: {record.parent_area_name}-{record.area_name}\n"
 
-            entity = MessageEntity(MessageEntity.TEXT_LINK, url=f"https://live.bilibili.com/{record.room_id}", offset=0, length=len(text))
+            # it is ok to modify a deleted message
+            record.is_living = False # temporarily modify is_living so that it will generate right text
+            text = record.generateMessageText(self.timezone, datetime.now().astimezone(utc))
+            record.is_living = True
             option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
-            
-            if record.start_time != None:
-                timenow = datetime.now().astimezone(utc)
-                time_delta_str = str(timenow - record.start_time).split(".")[0]
-                text += f"開始時間： {record.start_time.astimezone(self.timezone).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
-                text += f"結束時間： {timenow.astimezone(self.timezone).strftime('%Y/%m/%d %H:%M:%S')} {self.timezone.zone}\n"
-                text += f"持續時間： {time_delta_str}\n"
 
-            text = escape_markdown(text, 2, "text_link")
-
-            await record.message_sent.edit_text(text, entities=[entity], link_preview_options=option)
+            await record.message_sent.edit_text(text, parse_mode="MarkdownV2", link_preview_options=option)
  
     async def appStart(self):
 

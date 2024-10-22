@@ -1,6 +1,10 @@
 import httpx
 import json
 
+"""
+    liveroom.py: bilibili_api.live.LiveRoom Class naive substitution
+"""
+
 # api found at https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/live/info.md
 # but the response does not contain uname
 # API = "https://api.live.bilibili.com/room/v1/Room/get_info"
