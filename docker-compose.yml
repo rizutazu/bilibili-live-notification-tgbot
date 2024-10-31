@@ -6,6 +6,11 @@ services:
       - .:/usr/src/bilibili-live-notification-tgbot
     environment:
       - BILILIVENOTIBOT_DEBUG
+      - BILILIVENOTIBOT_TGBOT_TOKEN
+      - BILILIVENOTIBOT_TG_CHAT_ID
+      - BILILIVENOTIBOT_TIMEZONE
+      - BILILIVENOTIBOT_POLL_INTERVAL
+      - BILILIVENOTIBOT_SUBSCRIBED_ROOMS
     logging:
       driver: "json-file"
       options:

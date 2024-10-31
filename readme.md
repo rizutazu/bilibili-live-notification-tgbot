@@ -55,15 +55,17 @@ Bilibili live notification bot 已啟動。
 
 1. clone本倉庫
 
-2. 配置參數。
+2. 配置參數
 
-參考下方的[第四節](#config)，複製出一份`config.json`，或者，如果使用environment variables的話，複製出一份`env_file.example`，重命名為`env_file`，並添加配置。
+參考下方的[第四節](#config-json)，複製出一份`config.json`，填寫好配置；
+
+或者，如果使用environment variables的話，參考[下方](#config-env)，設置好環境變量。
 
 3. 啟動container
 
-如果使用`config.json`： `sudo docker-compose up -d`
+`make up`
 
-如果使用`env_file`： `sudo docker-compose --env-file ./env_file up -d`
+如果有更新時，可以執行`make update`進行自動更新和重新部署服務
 
 ### 直接部署在本地。
 
@@ -82,7 +84,7 @@ Bilibili live notification bot 已啟動。
 `pip install -r requirements.txt`
 
 4. 配置參數： 
-<a name="config"></a>
+<a name="config-json"></a>
 
 可以使用`config.json`，或是environment variables。**當environment variables條目存在時，總是優先於`config.json`而生效。**
 
@@ -120,6 +122,7 @@ Bilibili live notification bot 已啟動。
 ```
 
 - environment variables
+<a name="config-env"></a>
 
 參考`env_file.example`。格式為`BILILIVENOTIBOT_` + 上面json中所有出現字段的大寫，如下：
 
