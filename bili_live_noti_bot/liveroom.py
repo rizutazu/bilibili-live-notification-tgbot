@@ -33,10 +33,16 @@ class LiveRoom():
         params = {
             "room_id": int(self.room_id)
         }
-        response = await self.httpx_client.get(API, params=params, headers=HEADERS)
-        response.raise_for_status()
 
-        result = json.loads(response.text)
+
+        try:
+            response = await self.httpx_client.get(API, params=params, headers=HEADERS)
+            response.raise_for_status()
+            result = json.loads(response.text)
+        except httpx.TimeoutException:
+            raise TimeoutException()
+        except httpx.HTTPStatusError:
+            raise HTTPStatusError(response.status_code)
 
         code = result.get("code")
         if code == None:
@@ -47,5 +53,29 @@ class LiveRoom():
         return result.get("data")
 
 class ResponseCodeException(Exception):
+    """
+        exception about `code` field in bilibili api response 
+    """
     def __init__(self, *args: object) -> None:
         super().__init__(*args)
+
+class HTTPStatusError(Exception):
+    """
+        http status code exception
+    """
+    def __init__(self, status_code: int, *args: object) -> None:
+        super().__init__(*args)
+        # from httpx/_models.py: Response.raise_for_status
+        error_types = {
+            1: "Informational response",
+            3: "Redirect response",
+            4: "Client error",
+            5: "Server error",
+        }
+        self.error_type: str = error_types.get(status_code // 100, "Invalid status code")
+        self.status_code: int = status_code
+        
+class TimeoutException(Exception):
+    """
+        request time out exception
+    """

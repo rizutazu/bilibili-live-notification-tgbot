@@ -2,7 +2,6 @@ from __future__ import annotations
 from telegram import Bot, Message, LinkPreviewOptions
 from telegram.request import HTTPXRequest
 from telegram.error import TimedOut, BadRequest
-from httpx import TimeoutException
 from aiolimiter import AsyncLimiter
 from asyncio.locks import Lock
 from asyncio import sleep
@@ -11,7 +10,7 @@ from pytz import timezone, utc
 import logging
 import os
 
-from .liveroom import ResponseCodeException
+from .liveroom import ResponseCodeException, TimeoutException, HTTPStatusError
 
 # test flag: use DummyLiveRoom to examine the functionality
 if os.getenv("BILILIVENOTIBOT_TEST") != None:
@@ -204,19 +203,33 @@ class BilibiliLiveNotificationBot():
             # telegram timeout error
             logger.warning("Telegram TimedOut exception, will resume after 5s")
             await sleep(5)
+        except HTTPStatusError as e:
+            # bilibili api weird situation
+            # i've encountered 504 before and i don't know why 
+            if (e.error_type == "Server error"):
+                logger.warning(f"bilibili api http status {e.status_code}: {e.error_type}, will resume after 5s")
+                await sleep(5)
+            else:
+                # 什么情况
+                error_text = f"bilibili api unexpected http status {e.status_code}: {e.error_type}"
+                logger.error(error_text)
+                if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
+                    await self.sendDebugMessage(error_text)
+                exit(1)
         except BadRequest as e:
+            # telegram bad request
             if str(e) == "Chat not found":
                 logger.warning("Cannot find specified chat, maybe you forget to send /start message?")
                 await sleep(10)
             else:
-                logger.error(f"Bad request exception occurred when updating room information: {type(e).__name__}: {str(e)}")
+                logger.error(f"Bad request exception occurred during updating room information: {type(e).__name__}: {str(e)}")
                 exit(1)
         # 什麼情況
         except Exception as e:
-            logger.error(f"Unexpected error when updating room information: {type(e).__name__}: {str(e)}")
-
+            error_text = f"Unexpected error during updating room information: {type(e).__name__}: {str(e)}"
+            logger.error(error_text)
             if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
-                await self.sendDebugMessage(f"Unexpected error when updating room information: {type(e).__name__}: {str(e)}")
+                await self.sendDebugMessage(error_text)
             exit(1)
 
     # rate limit: 50/1min

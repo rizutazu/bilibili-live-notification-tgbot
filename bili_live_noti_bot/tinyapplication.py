@@ -100,9 +100,10 @@ class TinyApplication():
                 await sleep(5)
             # 什麼情況
             except Exception as e:
-                logger.error(f"Unexpected error when setting bot commands: {type(e).__name__}: {str(e)}")
+                error_text = f"Unexpected error when setting bot commands: {type(e).__name__}: {str(e)}"
+                logger.error(error_text)
                 if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
-                    await self.owner.sendDebugMessage(f"Unexpected error when setting bot commands: {type(e).__name__}: {str(e)}")
+                    await self.owner.sendDebugMessage(error_text)
                 exit(1)
 
         while True:
@@ -125,9 +126,10 @@ class TinyApplication():
                 continue
             # 什麼情況
             except Exception as e:
-                logger.error(f"Unexpected error when polling updates: {type(e).__name__}: {str(e)}")
+                error_text = f"Unexpected error when polling updates: {type(e).__name__}: {str(e)}"
+                logger.error(error_text)
                 if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
-                    await self.owner.sendDebugMessage(f"Unexpected error when polling updates: {type(e).__name__}: {str(e)}")
+                    await self.owner.sendDebugMessage(error_text)
                 exit(1)
 
 class CommandHandler():
