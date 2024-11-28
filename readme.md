@@ -55,17 +55,17 @@ Bilibili live notification bot 已啟動。
 
 1. clone本倉庫
 
-2. 配置參數
+2. 配置變數
 
 參考下方的[第四節](#config-json)，複製出一份`config.json`，填寫好配置；
 
-或者，如果使用environment variables的話，參考[下方](#config-env)，設置好環境變量。
+或者，如果使用environment variables的話，參考[下方](#config-env)，設置好環境變數。
 
 3. 啟動container
 
 `make up`
 
-如果有更新時，可以執行`make update`進行自動更新和重新部署服務
+如果有更新時，可以執行`make update`以拉取更新和重新部署服務
 
 ### 直接部署在本地。
 
@@ -83,7 +83,7 @@ Bilibili live notification bot 已啟動。
 
 `pip install -r requirements.txt`
 
-4. 配置參數： 
+4. 配置變數： 
 <a name="config-json"></a>
 
 可以使用`config.json`，或是environment variables。**當environment variables條目存在時，總是優先於`config.json`而生效。**
@@ -94,7 +94,7 @@ Bilibili live notification bot 已啟動。
 
 `cp config.example.json config.json`
 
-然後依照下面的提示填寫參數：
+然後依照下面的提示填寫變數：
 
 ```json
 {
@@ -105,7 +105,7 @@ Bilibili live notification bot 已啟動。
     // 這個是bot將會發送開播提醒的對象的chat id，就填寫自己tg的那一串唯一數字id好了，反正我也沒考慮過其他用法（劃掉
 
     "timezone": "Asia/Shanghai",
-    // 用於指定開播提醒中時間的時區，可選參數列表參見pytz timezone list
+    // 用於指定開播提醒中時間的時區，可選變數列表參見pytz timezone list
 
     "poll_interval": 10,
     // 輪詢間隔，用於指定 完整查詢一輪所有關注了的直播間的狀態間 的間隔，單位：秒

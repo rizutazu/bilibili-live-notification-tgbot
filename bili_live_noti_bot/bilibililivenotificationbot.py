@@ -190,9 +190,9 @@ class BilibiliLiveNotificationBot():
                     new_record.clear()
                     self.room_records[room_id] = new_record
                     
-        except ResponseCodeException:
+        except ResponseCodeException as e:
             # live room does not exist
-            logger.info(f"Room {room_id}: bilibili api ResponseCodeException, mark as invalid")
+            logger.info(f"Room {room_id}: bilibili api ResponseCodeException: {str(e)}, mark as invalid")
             self.room_records[room_id].is_valid = False
             await self.sendWarningMessage(f"直播間 {room_id} 不存在，已禁用")
         except TimeoutException:
