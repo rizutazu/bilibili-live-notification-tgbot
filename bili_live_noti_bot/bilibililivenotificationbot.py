@@ -191,10 +191,16 @@ class BilibiliLiveNotificationBot():
                     self.room_records[room_id] = new_record
                     
         except ResponseCodeException as e:
-            # live room does not exist
-            logger.info(f"Room {room_id}: bilibili api ResponseCodeException: {str(e)}, mark as invalid")
-            self.room_records[room_id].is_valid = False
-            await self.sendWarningMessage(f"直播間 {room_id} 不存在，已禁用")
+            # live room may not exist
+            if e.code == 1:
+                logger.info(f"Room {room_id} does not exist, marks as invalid")
+                self.room_records[room_id].is_valid = False
+                await self.sendWarningMessage(f"直播間 {room_id} 不存在，已禁用")
+            else:   # exception captured: 19002000: 获取初始化数据失败, may be upstream error??? 
+                logger.warning(f"bilibili api ResponseCodeException code={e.code} message={e.message}")
+                if e.code != 19002000:      # yet another 什麼情況
+                    self.room_records[room_id].is_valid = False
+                    await self.sendWarningMessage(f"直播間 {room_id} 出現未知錯誤，已禁用： {e.code}: {e.message}")
         except TimeoutException:
             # bilibili api timeout
             logger.warning(f"bilibili api TimeoutError, will resume after 5s")

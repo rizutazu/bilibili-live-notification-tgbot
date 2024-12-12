@@ -86,7 +86,7 @@ Bilibili live notification bot 已啟動。
 4. 配置變數： 
 <a name="config-json"></a>
 
-可以使用`config.json`，或是environment variables。**當environment variables條目存在時，總是優先於`config.json`而生效。**
+可以使用`config.json`，或是environment variables。**當某一environment variables條目存在時，總是優先於對應的`config.json`中的條目而生效。**
 
 - `config.json`：
 

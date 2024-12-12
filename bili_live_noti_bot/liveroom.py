@@ -48,7 +48,7 @@ class LiveRoom():
         if code == None:
             raise ResponseCodeException("response data does not contain code field")
         elif code != 0:
-            raise ResponseCodeException(f"code field is not 0, message={result.get('message')}")
+            raise ResponseCodeException(code, result.get("message"))
         
         return result.get("data")
 
@@ -56,8 +56,10 @@ class ResponseCodeException(Exception):
     """
         exception about `code` field in bilibili api response 
     """
-    def __init__(self, *args: object) -> None:
+    def __init__(self, code: int, message: str, *args: object) -> None:
         super().__init__(*args)
+        self.code = code
+        self.message = message
 
 class HTTPStatusError(Exception):
     """
