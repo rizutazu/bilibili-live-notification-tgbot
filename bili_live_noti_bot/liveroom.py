@@ -17,6 +17,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.54",
     "Referer": "https://www.bilibili.com",
 }
+# curl --header "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.54" -- header "Referer: https://www.bilibili.com" https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=
 
 class LiveRoom():
     
