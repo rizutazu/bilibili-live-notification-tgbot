@@ -23,8 +23,8 @@ class LiveRoom():
     
     def __init__(self, room_id: str) -> None:
 
-        if not room_id.isnumeric():
-            raise ValueError("room_id is not a numeric string")
+        if not (room_id.isnumeric() and room_id.isascii()):
+            raise ValueError("room_id is not a numeric ascii string")
         
         self.room_id: str = room_id
         self.httpx_client: httpx.AsyncClient = httpx.AsyncClient()

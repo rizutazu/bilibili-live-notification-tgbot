@@ -65,7 +65,7 @@ class BilibiliLiveNotificationBot():
         """
 
         await self.config_lock.acquire()
-        rooms = [room for room in rooms if room.isnumeric()]
+        rooms = [room for room in rooms if (room.isnumeric() and room.isascii())]
         rooms = list(set(rooms))
         self.subscribed_rooms.extend(rooms)
         for room_id in rooms:
