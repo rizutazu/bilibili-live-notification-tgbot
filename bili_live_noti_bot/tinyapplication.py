@@ -2,7 +2,7 @@ from __future__ import annotations
 from telegram.ext import Updater
 from asyncio import Queue, sleep
 from telegram import Bot, Message, MessageEntity, Update, BotCommand
-from telegram.error import TimedOut
+from telegram.error import NetworkError
 import logging
 import os
 import re
@@ -116,8 +116,8 @@ class TinyApplication():
                 while True:
                     update = await self.update_queue.get()
                     await self.handleUpdate(update)
-            except TimedOut:
-                logger.warning("TimedOut exception when polling updates, will shutdown and restart after 5s")
+            except NetworkError:
+                logger.warning("NetworkError exception when polling updates, will shutdown and restart after 5s")
                 if self.updater.running:
                     await self.updater.stop()
                 if self.updater._initialized:
