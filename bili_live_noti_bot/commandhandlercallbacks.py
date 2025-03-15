@@ -9,10 +9,10 @@ from telegram.helpers import escape_markdown
 async def handleStart(update: Update, caller: TinyApplication, argument: str):
 
     message = """Bilibili live notification bot 已啟動。
-輸入 /subscribe room_id 以添加提醒的直播間；
-輸入 /list 以列出加入提醒列表的直播間；
-輸入 /unsubscribe room_id 以將直播間移出提醒列表；
-輸入 /interval 以顯示輪詢完整提醒列表的間隔，
+輸入 /subscribe room_id 以添加訂閱的直播間；
+輸入 /list 以列出加入訂閱列表的直播間；
+輸入 /unsubscribe room_id 以將直播間移出訂閱列表；
+輸入 /interval 以顯示輪詢完整訂閱列表的間隔，
 輸入 /interval number_int 以修改這一間隔；
 輸入 /echo 以查看bot是否在運行
 """
@@ -39,7 +39,7 @@ async def handleSubscribe(update: Update, caller: TinyApplication, argument: str
         rooms = await caller.owner.getSubscribedRooms()
 
         if argument in rooms.keys():
-            await update.message.reply_text(f"直播間 {argument} 已在提醒列表中")
+            await update.message.reply_text(f"直播間 {argument} 已在訂閱列表中")
         else:
             await caller.owner.subscribeRooms([argument])
             await update.message.reply_text(f"已添加直播間 {argument}")
@@ -52,7 +52,7 @@ async def handleUnsubscribe(update: Update, caller: TinyApplication, argument: s
         rooms = await caller.owner.getSubscribedRooms()
 
         if argument not in rooms.keys():
-            await update.message.reply_text(f"直播間 {argument} 不在提醒列表中")
+            await update.message.reply_text(f"直播間 {argument} 不在訂閱列表中")
         else:
             await caller.owner.unsubscribeRooms([argument])
             await update.message.reply_text(f"已移除直播間 {argument}")

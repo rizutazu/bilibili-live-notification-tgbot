@@ -164,20 +164,21 @@ class RoomRecord():
                 text += "[🟠]未開播："
             text += self.uname + "\n"
             text = escape_markdown(text, 2)
-            text += f"  ├── [個人空間： {self.uid}](space.bilibili.com/{self.uid})\n"   # so anyone wants to exploit sth here?
-            text += f"  ├── [直播間號： {self.room_id}](https://live.bilibili.com/{self.room_id})\n"
+            
+            text += f"  ├ [直播間號： {self.room_id}](https://live.bilibili.com/{self.room_id})\n"
+            text += f"  ├ [個人空間： {self.uid}](space.bilibili.com/{self.uid})\n"   # so anyone wants to exploit sth here?
 
             if not self.is_living:
                 if self.stop_time != None:
-                    text +=  f"  ├── 上次直播結束時間： {self.stop_time.astimezone(timezone).strftime('%Y/%m/%d %H:%M:%S')} {timezone.zone}\n"
+                    text +=  f"  ├ 上次直播結束時間： {self.stop_time.astimezone(timezone).strftime('%Y/%m/%d %H:%M:%S')} {timezone.zone}\n"
                 else:
-                    text +=  f"  ├── 上次直播結束時間： 未記錄\n"
+                    text +=  f"  ├ 上次直播結束時間： 未記錄\n"
 
-            text += f"  └── 當前直播間標題： {escape_markdown(self.current_room_title, 2)}\n"
+            text += f"  └ 當前直播間標題： {escape_markdown(self.current_room_title, 2)}\n"
 
         else:
             text += "[❓]未知：\n"
-            text += f"  └── [直播間號： {self.room_id}](https://live.bilibili.com/{self.room_id})\n"
+            text += f"  └ [直播間號： {self.room_id}](https://live.bilibili.com/{self.room_id})\n"
         
         return text
 

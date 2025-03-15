@@ -1,7 +1,7 @@
 from __future__ import annotations
 from telegram import Bot, Message, LinkPreviewOptions
 from telegram.request import HTTPXRequest
-from telegram.error import TimedOut, BadRequest
+from telegram.error import NetworkError, BadRequest
 from aiolimiter import AsyncLimiter
 from asyncio.locks import Lock
 from asyncio import sleep
@@ -186,10 +186,6 @@ class BilibiliLiveNotificationBot():
             # bilibili api timeout
             logger.warning(f"bilibili api TimeoutError, will resume after 5s")
             await sleep(5)
-        except TimedOut:
-            # telegram timeout error
-            logger.warning("Telegram TimedOut exception, will resume after 5s")
-            await sleep(5)
         except HTTPStatusError as e:
             # bilibili api weird situation
             # i've encountered 504 before and i don't know why 
@@ -211,6 +207,10 @@ class BilibiliLiveNotificationBot():
             else:
                 logger.error(f"Bad request exception occurred during updating room information: {type(e).__name__}: {str(e)}")
                 exit(1)
+        except NetworkError:
+            # telegram NetworkError error
+            logger.warning("Telegram NetworkError exception, will resume after 5s")
+            await sleep(5)
         # 什麼情況
         except Exception as e:
             error_text = f"Unexpected error during updating room information: {type(e).__name__}: {str(e)}"
@@ -293,10 +293,10 @@ class BilibiliLiveNotificationBot():
 
         command_handlers = [
             CommandHandler("start", "啟動bot，以及顯示help", handleStart),
-            CommandHandler("list", "列出提醒的直播間以及記錄的信息", handleList),
-            CommandHandler("subscribe", "添加提醒的直播間", handleSubscribe),
-            CommandHandler("unsubscribe", "移出提醒列表", handleUnsubscribe),
-            CommandHandler("interval", "顯示，或修改對完整的提醒列表的輪詢的間隔", handleInterval),
+            CommandHandler("list", "列出訂閱的直播間以及記錄的信息", handleList),
+            CommandHandler("subscribe", "添加訂閱的直播間", handleSubscribe),
+            CommandHandler("unsubscribe", "移出訂閱列表", handleUnsubscribe),
+            CommandHandler("interval", "顯示，或修改對完整的訂閱列表的輪詢的間隔", handleInterval),
             CommandHandler("echo", "還活著嗎", handleEcho)
         ]
 
