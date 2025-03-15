@@ -93,20 +93,14 @@ class BilibiliLiveNotificationBot():
         
         logger.info(f"Unsubscribe rooms: {rooms}")
 
-    async def getSubscribedRooms(self) -> dict[str, dict]:
+    async def getSubscribedRooms(self) -> dict[str, RoomRecord]:
 
         """
-            獲取關注的直播間的列表，以及開播狀態
+            獲取關注的直播間的列表
         """
 
         await self.config_lock.acquire()
-        ret = {}
-        for room_id, record in self.room_records.items():
-            ret[room_id] = {
-                "is_living": record.is_living,
-                "uname": record.uname,
-                "uid": record.uid
-            }
+        ret = self.room_records
         self.config_lock.release()
         return ret
 
@@ -161,34 +155,26 @@ class BilibiliLiveNotificationBot():
             # F/None      | F               | T,send msg  |
             # send msg: 發送開播提醒
             # check diff: 檢查信息變動
-            # 更新記錄的基本思路： new_record.inherit(current_record)，這樣，最新的迭代的記錄保存在new_record中
-            # 使用這個來發送消息，發送成功後再替代current_record
-            # 就是感覺不怎麼優雅
             current_record = self.room_records[room_id]
 
-            if current_record.is_living != True:        # 啟動bot後的第一個狀態/not living
-                if new_record.is_living:                # 第一狀態/not living --> living, 發消息
+            if current_record.is_living != True:        # 一開始沒在直播：啟動bot後的第一個狀態/not living
+                if new_record.is_living:                    # not living --> living, 發消息
                     logger.info(f"Room {room_id}: send live start message")
-                    new_record.inherit(current_record)
-                    if new_record.message_sent == None:
-                        new_record.message_sent = await self.sendLiveStartMessage(new_record)
-                    # is_living == False時發的消息會不為None嗎，我不知道啊（
-                    self.room_records[room_id] = new_record
-                else:                                   # 第一狀態/not living --> not living，更新信息
-                    current_record.updateUserInfo(new_record)   # 只更新與用戶信息有關的條目
-            else:                                       # living -> 檢查下一狀態
-                if new_record.is_living:                # 還在直播，檢查狀態更新
+                    current_record.updateRecord(new_record)
+                    current_record.message_sent = await self.sendLiveStartMessage(new_record)
+                else:                                       # not living --> not living，更新記錄
+                    current_record.updateRecord(new_record)
+            else:                                       # 一開始在直播，檢查下一狀態：
+                if new_record.is_living:                    # 還在直播，檢查狀態更新
                     if current_record.hasUpdate(new_record):
                         logger.info(f"Room {room_id}: update sent message")
-                        new_record.inherit(current_record)
-                        new_record.message_sent = await self.modifySentLiveMessage(new_record)
-                        self.room_records[room_id] = new_record
-                else:                                   # 沒在播了，清空狀態
-                    logger.info(f"Room {room_id}: live end, mark sent message")
-                    new_record.inherit(current_record, inherit_time=True)
-                    await self.markSentLiveMessageAsEnd(new_record)
-                    new_record.clear()
-                    self.room_records[room_id] = new_record
+                        current_record.updateRecord(new_record, update_title_history=True)  # 記錄標題變動
+                        current_record.message_sent = await self.modifySentLiveMessage(current_record)
+                else:                                       # 沒在播了，清理信息和歷史標題
+                    logger.info(f"Room {room_id}: live end, update sent message")
+                    current_record.updateRecord(new_record, update_start_time=False)    # 此時開始時間為0，避免覆蓋記錄的開始時間
+                    await self.markSentLiveMessageAsEnd(current_record)
+                    current_record.liveEnd()
                     
         except ResponseCodeException as e:
             # live room may not exist
@@ -275,7 +261,7 @@ class BilibiliLiveNotificationBot():
 
         return await self.tg_bot.sendMessage(self.chat_id, text=text, parse_mode="MarkdownV2", link_preview_options=option)
 
-    async def modifySentLiveMessage(self, record: RoomRecord):
+    async def modifySentLiveMessage(self, record: RoomRecord) -> Message:
 
         """
             更新發送的消息
@@ -288,22 +274,16 @@ class BilibiliLiveNotificationBot():
 
             return await record.message_sent.edit_text(text, parse_mode="MarkdownV2", link_preview_options=option)
         
-        else:
-            return None
+        return None
 
     async def markSentLiveMessageAsEnd(self, record: RoomRecord):
 
         """
-            標記結束
+            標記結束，記錄結束時間
         """
 
-        if record.message_sent != None:
-
-            # it is ok to modify a deleted message
-            text = record.generateMessageText(self.timezone, datetime.now().astimezone(utc))
-            option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
-
-            await record.message_sent.edit_text(text, parse_mode="MarkdownV2", link_preview_options=option)
+        record.stop_time = datetime.now().astimezone(utc)
+        await self.modifySentLiveMessage(record)
  
     async def appStart(self):
 

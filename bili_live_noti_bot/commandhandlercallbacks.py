@@ -21,27 +21,13 @@ async def handleStart(update: Update, caller: TinyApplication, argument: str):
 async def handleList(update: Update, caller: TinyApplication, argument: str):
 
     text = ""
-
-    room_info = await caller.owner.getSubscribedRooms()
-    for room_id, info in room_info.items():
-
-        newline = ""
-        if info["is_living"] != None:
-            live_status_str = ["[🟢]直播中: ", "[🟠]未開播: "]
-            newline += live_status_str[0] if info["is_living"] else live_status_str[1]
-        else:
-            newline += "[❓]未知: "
-
-        newline = escape_markdown(newline, 2)
-
-        newline += f"[直播間 {room_id}](https://live.bilibili.com/{room_id})"
-
-        if info["uname"] != None:
-            newline += f": [{escape_markdown(info['uname'], 2)}](https://space.bilibili.com/{info['uid']})\n"
-        else:
-            newline += "\n"
-
-        text += newline
+    rooms = await caller.owner.getSubscribedRooms()
+    for room in rooms.values():
+        text += room.generateInfoText(caller.owner.timezone)
+        if text != "":
+            text += "\n"
+    if text == "":
+        text = "無關注的直播間"
 
     await update.message.reply_text(text, parse_mode="MarkdownV2", disable_web_page_preview=True)
 
@@ -50,9 +36,9 @@ async def handleSubscribe(update: Update, caller: TinyApplication, argument: str
     if not (argument.isnumeric() and argument.isascii()):
         await update.message.reply_text("請給出有效的直播間號")
     else:
-        room_info = await caller.owner.getSubscribedRooms()
+        rooms = await caller.owner.getSubscribedRooms()
 
-        if argument in room_info.keys():
+        if argument in rooms.keys():
             await update.message.reply_text(f"直播間 {argument} 已在提醒列表中")
         else:
             await caller.owner.subscribeRooms([argument])
@@ -63,9 +49,9 @@ async def handleUnsubscribe(update: Update, caller: TinyApplication, argument: s
     if not (argument.isnumeric() and argument.isascii()):
         await update.message.reply_text("請給出有效的直播間號")
     else:
-        room_info = await caller.owner.getSubscribedRooms()
+        rooms = await caller.owner.getSubscribedRooms()
 
-        if argument not in room_info.keys():
+        if argument not in rooms.keys():
             await update.message.reply_text(f"直播間 {argument} 不在提醒列表中")
         else:
             await caller.owner.unsubscribeRooms([argument])

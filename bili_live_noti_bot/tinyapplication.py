@@ -95,8 +95,8 @@ class TinyApplication():
                     logger.info(f"Add /{command} command handler")
                 await self.updater.bot.setMyCommands(bot_commands)
                 break
-            except TimedOut:
-                logger.warning(f"TimedOut exception when setting bot command, will retry after 5s")
+            except NetworkError:
+                logger.warning(f"NetworkError exception when setting bot command, will retry after 5s")
                 await sleep(5)
             # 什麼情況
             except Exception as e:

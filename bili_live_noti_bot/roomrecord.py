@@ -16,21 +16,26 @@ class RoomRecord():
         # bot-related
         self.room: LiveRoom = None                  # live.LiveRoom instance
         self.is_valid: bool = True                  # 是否為有效直播間
+
+        
+
+        # variables that associated with specific live
         self.message_sent: Message = None           # 已經發送的通知消息，用於在直播結束時修改
 
-        # variables that may not changing during live 
+        # variables that can be directly used
+        self.is_living: bool = None                 # 是否在直播
         self.room_id: str = room_id                 # 直播間號
         self.uid: str = None                        # 主播在主站的uid
         self.uname: str = None                      # 主播的顯示名稱
-
-        # variables that change among each live
-        self.is_living: bool = None                 # 是否在直播
-        self.history_room_titles: list[str] = []    # 直播間用過的標題的列表，不含當前在用的，按時間從早到晚排序,
-        self.current_room_title: str = None         # 當前的標題
-        self.start_time: datetime = None            # 開始直播的時間
+        self.current_room_title: str = None         # 當前的直播間標題
         self.cover_url: str = None                  # 直播封面的鏈接
         self.area_name_pair: str = None             # 所在的分區
 
+        # variables that need special care among each live
+        self.history_room_titles: list[str] = []    # 直播間用過的標題的列表，不含當前在用的，按時間從早到晚排序
+        self.start_time: datetime = None            # 開始直播的時間
+        self.stop_time: datetime = None             # 上一次直播結束時間，只在未開播時有效
+        
     def parseResult(self, result: dict):
 
         """
@@ -59,46 +64,52 @@ class RoomRecord():
             and self.cover_url == new_record.cover_url \
             and self.area_name_pair == new_record.area_name_pair)
 
-    def inherit(self, old_record: RoomRecord, inherit_time: bool=False):
+    def updateRecord(self, new_record: RoomRecord, update_title_history: bool=False, update_start_time: bool=True):
 
         """
-            繼承舊的record的部分信息，更新並把title history一併記錄了，等效於更新歷史記錄
+            以從API獲取到的新記錄更新自身。
+            update_title_history：是否要根據新紀錄的標題更新歷史標題記錄
+            update_start_time：是否要更新開始時間（可能為0）
         """
-        
-        self.room = old_record.room
-        self.message_sent = old_record.message_sent
 
-        if inherit_time:
-            self.start_time = old_record.start_time
-
-        self.history_room_titles = old_record.history_room_titles.copy()
-        if old_record.current_room_title != None \
-                and old_record.current_room_title != self.current_room_title:
-            self.history_room_titles.append(old_record.current_room_title)
-
-    def updateUserInfo(self, new_record: RoomRecord):
-
-        """
-            只更新與單次直播無關的
-        """
-        self.is_living = new_record.is_living   # for /list return
+        # basic info
         self.uid = new_record.uid
         self.uname = new_record.uname
+        self.is_living = new_record.is_living
 
-    def clear(self):    # 清空狀態
+        # room title && history title log
+        if update_title_history and self.current_room_title != None and self.current_room_title != new_record.current_room_title:
+            self.history_room_titles.append(self.current_room_title)
+            print(self.history_room_titles)
+        self.current_room_title = new_record.current_room_title
+
+        if update_start_time:
+            self.start_time = new_record.start_time
+
+        self.cover_url = new_record.cover_url
+        self.area_name_pair = new_record.area_name_pair
+
+    # def logUserInfo(self, new_record: RoomRecord):
+
+    #     """
+    #         更新主播信息
+    #     """
+
+    #     self.is_living = new_record.is_living   # for /list return
+    #     self.uid = new_record.uid
+    #     self.uname = new_record.uname
+    #     self.current_room_title = new_record.current_room_title
+
+    def liveEnd(self):    # 清空狀態
 
         """
-            清空與單次直播有關的記錄
+            直播結束，清空和一次直播關聯的條目
         """
 
         self.history_room_titles.clear()
-        self.current_room_title = None
         self.message_sent = None
-        self.start_time = None
-        self.cover_url = None
-        self.area_name_pair = None
 
-    def generateMessageText(self, timezone: BaseTzInfo, stop_time: datetime=None) -> str:
+    def generateMessageText(self, timezone: BaseTzInfo) -> str:
 
         """
             生成發送的消息，包括點擊鏈接，markdown格式
@@ -111,12 +122,16 @@ class RoomRecord():
         else:
             text += "[🟠]"
         
+        # username
         text += f"{self.uname}: "
-        # add title changing history
-        for title in self.history_room_titles:
-            text += f"{title} ➡️ "
+
         # add current title
-        text += f"{self.current_room_title}\n"
+        text += f"{self.current_room_title}"
+        # add title changing history
+        for title in reversed(self.history_room_titles):
+            text += f" ⬅️ {title}"
+        
+        text += "\n"
 
         # add area
         text += f"分區: {self.area_name_pair}"
@@ -129,10 +144,40 @@ class RoomRecord():
         if self.start_time != None:
             text += f"開始時間： {self.start_time.astimezone(timezone).strftime('%Y/%m/%d %H:%M:%S')} {timezone.zone}\n"
 
-        if stop_time != None:
-            time_delta_str = str(stop_time - self.start_time).split(".")[0]
-            text += f"結束時間： {stop_time.astimezone(timezone).strftime('%Y/%m/%d %H:%M:%S')} {timezone.zone}\n"
+        if self.stop_time != None and not self.is_living:
+            time_delta_str = str(self.stop_time - self.start_time).split(".")[0]
+            text += f"結束時間： {self.stop_time.astimezone(timezone).strftime('%Y/%m/%d %H:%M:%S')} {timezone.zone}\n"
             text += f"持續時間： {time_delta_str}\n"
 
+        return text
+    
+    def generateInfoText(self, timezone: BaseTzInfo) -> str:
+
+        if not self.is_valid:
+            return ""
+
+        text = ""
+        if self.is_living != None:
+            if self.is_living:
+                text += "[🟢]直播中："
+            else:
+                text += "[🟠]未開播："
+            text += self.uname + "\n"
+            text = escape_markdown(text, 2)
+            text += f"  ├── [個人空間： {self.uid}](space.bilibili.com/{self.uid})\n"   # so anyone wants to exploit sth here?
+            text += f"  ├── [直播間號： {self.room_id}](https://live.bilibili.com/{self.room_id})\n"
+
+            if not self.is_living:
+                if self.stop_time != None:
+                    text +=  f"  ├── 上次直播結束時間： {self.stop_time.astimezone(timezone).strftime('%Y/%m/%d %H:%M:%S')} {timezone.zone}\n"
+                else:
+                    text +=  f"  ├── 上次直播結束時間： 未記錄\n"
+
+            text += f"  └── 當前直播間標題： {escape_markdown(self.current_room_title, 2)}\n"
+
+        else:
+            text += "[❓]未知：\n"
+            text += f"  └── [直播間號： {self.room_id}](https://live.bilibili.com/{self.room_id})\n"
+        
         return text
 

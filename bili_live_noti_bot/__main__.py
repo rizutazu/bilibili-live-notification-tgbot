@@ -23,6 +23,7 @@ async def main():
     else:
         await bilibot.subscribeRooms(sub_lst)
 
+    print("Started")
     await gather(bilibot.subscribeStart(), bilibot.appStart())
 
 if __name__ == "__main__":

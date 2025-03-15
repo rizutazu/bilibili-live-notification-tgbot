@@ -16,7 +16,9 @@ Telegram bilibili直播開播提醒bot
 - 記錄開播時間、結束時間、直播時長、標題變動
 
 <p align="center">
-    <img src="assets/image-3.png" alt="" width="50%"><img src="assets/image-4.png" alt="" width="50%">
+    <img src="assets/image-5.png" alt="" width="33%">
+    <img src="assets/image-6.png" alt="" width="33%">
+    <img src="assets/image-7.png" alt="" width="33%">
 </p>
 
 *(是模仿來的樣式)*
@@ -26,9 +28,19 @@ Telegram bilibili直播開播提醒bot
 `/list`：
 
 ```
-[🟠]未開播: 直播間 114: (這裡是主播名稱)
-[🟢]直播中: 直播間 514: (這裡是主播名稱)
-[❓]未知: 直播間 1919
+[🟠]未開播：主包名稱desu
+  ├── 個人空間： 114514
+  ├── 直播間號： 114
+  ├── 上次直播結束時間： 1970/01/01 12:00:00 Asia/Shanghai
+  └── 當前直播間標題： 主包ㄉ新標題v3
+
+[🟢]直播中：主包B
+  ├── 個人空間： 1145141919
+  ├── 直播間號： 514
+  └── 當前直播間標題： 標題blabla
+
+[❓]未知: 
+  └── 直播間號： 1919
 ```
 
 標記為未知的是直播間加入了提醒列表，但還未進行過任何一次狀態查詢。
