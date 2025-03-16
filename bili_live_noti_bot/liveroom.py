@@ -40,10 +40,10 @@ class LiveRoom():
             response = await self.httpx_client.get(API, params=params, headers=HEADERS)
             response.raise_for_status()
             result = json.loads(response.text)
-        except httpx.TimeoutException:
-            raise TimeoutException()
         except httpx.HTTPStatusError:
             raise HTTPStatusError(response.status_code)
+        except httpx.NetworkError or httpx.TimeoutException:
+            raise NetworkError()
 
         code = result.get("code")
         if code == None:
@@ -78,7 +78,7 @@ class HTTPStatusError(Exception):
         self.error_type: str = error_types.get(status_code // 100, "Invalid status code")
         self.status_code: int = status_code
         
-class TimeoutException(Exception):
+class NetworkError(Exception):
     """
-        request time out exception
+        Any NetWork exception
     """

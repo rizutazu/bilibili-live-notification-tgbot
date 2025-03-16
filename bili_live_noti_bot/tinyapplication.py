@@ -2,7 +2,7 @@ from __future__ import annotations
 from telegram.ext import Updater
 from asyncio import Queue, sleep
 from telegram import Bot, Message, MessageEntity, Update, BotCommand
-from telegram.error import NetworkError
+import telegram.error
 import logging
 import os
 import re
@@ -95,7 +95,7 @@ class TinyApplication():
                     logger.info(f"Add /{command} command handler")
                 await self.updater.bot.setMyCommands(bot_commands)
                 break
-            except NetworkError:
+            except telegram.error.NetworkError:
                 logger.warning(f"NetworkError exception when setting bot command, will retry after 5s")
                 await sleep(5)
             # 什麼情況
@@ -116,7 +116,7 @@ class TinyApplication():
                 while True:
                     update = await self.update_queue.get()
                     await self.handleUpdate(update)
-            except NetworkError:
+            except telegram.error.NetworkError:
                 logger.warning("NetworkError exception when polling updates, will shutdown and restart after 5s")
                 if self.updater.running:
                     await self.updater.stop()

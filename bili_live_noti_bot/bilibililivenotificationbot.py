@@ -1,7 +1,7 @@
 from __future__ import annotations
 from telegram import Bot, Message, LinkPreviewOptions
-from telegram.request import HTTPXRequest
-from telegram.error import NetworkError, BadRequest
+import telegram.request
+import telegram.error
 from aiolimiter import AsyncLimiter
 from asyncio.locks import Lock
 from asyncio import sleep
@@ -10,7 +10,7 @@ from pytz import timezone, utc
 import logging
 import os
 
-from .liveroom import ResponseCodeException, TimeoutException, HTTPStatusError
+from .liveroom import HTTPStatusError, NetworkError, ResponseCodeException
 
 # test flag: use DummyLiveRoom to examine the functionality
 if os.getenv("BILILIVENOTIBOT_TEST") != None:
@@ -43,7 +43,7 @@ class BilibiliLiveNotificationBot():
         self.token: str = tg_bot_token
         self.chat_id: str = tg_chat_id
         self.tg_bot = Bot(tg_bot_token, 
-                            request=HTTPXRequest(connection_pool_size=20, read_timeout=30, write_timeout=30))
+                            request=telegram.request.HTTPXRequest(connection_pool_size=20, read_timeout=30, write_timeout=30))
         self.app = TinyApplication(self.tg_bot, self)
 
         # subscribe configs
@@ -182,10 +182,6 @@ class BilibiliLiveNotificationBot():
             logger.warning(f"bilibili api ResponseCodeException code={e.code} message={e.message}")
             self.room_records[room_id].is_valid = False
             await self.sendWarningMessage(f"直播間 {room_id} 出現錯誤，已禁用： {e.code}: {e.message}")
-        except TimeoutException:
-            # bilibili api timeout
-            logger.warning(f"bilibili api TimeoutError, will resume after 5s")
-            await sleep(5)
         except HTTPStatusError as e:
             # bilibili api weird situation
             # i've encountered 504 before and i don't know why 
@@ -199,7 +195,11 @@ class BilibiliLiveNotificationBot():
                 if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
                     await self.sendDebugMessage(error_text)
                 exit(1)
-        except BadRequest as e:
+        except NetworkError:
+            # bilibili api network error
+            logger.warning(f"bilibili api NetworkError, will resume after 5s")
+            await sleep(5)
+        except telegram.error.BadRequest as e:
             # telegram bad request
             if str(e) == "Chat not found":
                 logger.warning("Cannot find specified chat, maybe you forget to send /start message?")
@@ -207,7 +207,7 @@ class BilibiliLiveNotificationBot():
             else:
                 logger.error(f"Bad request exception occurred during updating room information: {type(e).__name__}: {str(e)}")
                 exit(1)
-        except NetworkError:
+        except telegram.error.NetworkError:
             # telegram NetworkError error
             logger.warning("Telegram NetworkError exception, will resume after 5s")
             await sleep(5)

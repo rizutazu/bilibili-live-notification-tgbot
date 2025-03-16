@@ -1,6 +1,5 @@
 from .tinyapplication import TinyApplication
 from telegram import Update
-from telegram.helpers import escape_markdown
 
 """
     handlefunctions.py: sets of CommandHandler callback functions
