@@ -42,7 +42,9 @@ class LiveRoom():
             result = json.loads(response.text)
         except httpx.HTTPStatusError:
             raise HTTPStatusError(response.status_code)
-        except httpx.NetworkError or httpx.TimeoutException:
+        except httpx.NetworkError:
+            raise NetworkError()
+        except httpx.TimeoutException:
             raise NetworkError()
 
         code = result.get("code")

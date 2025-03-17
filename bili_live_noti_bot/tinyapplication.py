@@ -6,6 +6,7 @@ import telegram.error
 import logging
 import os
 import re
+import traceback
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -99,8 +100,8 @@ class TinyApplication():
                 logger.warning(f"NetworkError exception when setting bot command, will retry after 5s")
                 await sleep(5)
             # 什麼情況
-            except Exception as e:
-                error_text = f"Unexpected error when setting bot commands: {type(e).__name__}: {str(e)}"
+            except Exception:
+                error_text = f"Unexpected error when setting bot commands: {traceback.format_exc()}"
                 logger.error(error_text)
                 if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
                     await self.owner.sendDebugMessage(error_text)
@@ -125,8 +126,8 @@ class TinyApplication():
                 await sleep(5)
                 continue
             # 什麼情況
-            except Exception as e:
-                error_text = f"Unexpected error when polling updates: {type(e).__name__}: {str(e)}"
+            except Exception:
+                error_text = f"Unexpected error when polling updates: {traceback.format_exc()}"
                 logger.error(error_text)
                 if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
                     await self.owner.sendDebugMessage(error_text)

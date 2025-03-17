@@ -9,6 +9,7 @@ from datetime import datetime
 from pytz import timezone, utc
 import logging
 import os
+import traceback
 
 from .liveroom import HTTPStatusError, NetworkError, ResponseCodeException
 
@@ -212,8 +213,8 @@ class BilibiliLiveNotificationBot():
             logger.warning("Telegram NetworkError exception, will resume after 5s")
             await sleep(5)
         # 什麼情況
-        except Exception as e:
-            error_text = f"Unexpected error during updating room information: {type(e).__name__}: {str(e)}"
+        except Exception:
+            error_text = f"Unexpected error during updating room information: {traceback.format_exc()}"
             logger.error(error_text)
             if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
                 await self.sendDebugMessage(error_text)
