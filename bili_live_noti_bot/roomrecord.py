@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .liveroom import LiveRoom
-from telegram import Message
+from telegram import Message, constants
 from telegram.helpers import escape_markdown
 from datetime import datetime
 from pytz import utc, BaseTzInfo
@@ -162,8 +162,8 @@ class RoomRecord():
                 text += "[🟢]直播中："
             else:
                 text += "[🟠]未開播："
-            text += self.uname + "\n"
             text = escape_markdown(text, 2)
+            text += f" `{escape_markdown(self.uname, 2, constants.MessageEntityType.CODE)}`\n"
             
             text += f"  ├ [直播間號： {self.room_id}](https://live.bilibili.com/{self.room_id})\n"
             text += f"  ├ [個人空間： {self.uid}](space.bilibili.com/{self.uid})\n"   # so anyone wants to exploit sth here?
@@ -174,10 +174,11 @@ class RoomRecord():
                 else:
                     text +=  f"  ├ 上次直播結束時間： 未記錄\n"
 
-            text += f"  └ 當前直播間標題： {escape_markdown(self.current_room_title, 2)}\n"
+            text += f"  └ 當前直播間標題： `{escape_markdown(self.current_room_title, 2, constants.MessageEntityType.CODE)}`\n"
 
         else:
             text += "[❓]未知：\n"
+            text = escape_markdown(text, 2)
             text += f"  └ [直播間號： {self.room_id}](https://live.bilibili.com/{self.room_id})\n"
         
         return text
