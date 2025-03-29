@@ -2,7 +2,6 @@ from __future__ import annotations
 from telegram import Bot, Message, LinkPreviewOptions
 import telegram.request
 import telegram.error
-from aiolimiter import AsyncLimiter
 from asyncio.locks import Lock
 from asyncio import sleep
 from datetime import datetime
@@ -53,7 +52,6 @@ class BilibiliLiveNotificationBot():
 
         # locks
         self.config_lock = Lock()
-        self.rate_limiter = AsyncLimiter(50)    # rate: 50 / 1min
         self.poll_interval: int = poll_interval
 
         # specify the display timezone of live_start_time 
@@ -130,8 +128,6 @@ class BilibiliLiveNotificationBot():
             `LiveRecord` 只在消息發送成功後才進行更新，不知道有沒有意義
         """
 
-        await sleep(0)
-
         # maybe async race condition?
         if room_id not in self.subscribed_rooms or self.room_records.get(room_id) == None:
             return
@@ -141,7 +137,7 @@ class BilibiliLiveNotificationBot():
             return
 
         try:
-            result = await self.getRoomInfoWithRateLimit(self.room_records[room_id].room)
+            result = await self.getRoomInfo(self.room_records[room_id].room)
 
             new_record = RoomRecord(room_id)
             new_record.parseResult(result)
@@ -178,28 +174,31 @@ class BilibiliLiveNotificationBot():
                     current_record.liveEnd()
                     
         except ResponseCodeException as e:
-            # live room may not exist
-            # it seems like the server will return 19002000 rather than 1 now, if the live room does not exist 
-            logger.warning(f"bilibili api ResponseCodeException code={e.code} message={e.message}")
-            self.room_records[room_id].is_valid = False
-            await self.sendWarningMessage(f"直播間 {room_id} 出現錯誤，已禁用： {e.code}: {e.message}")
+            if e.code != -352:
+                # live room may not exist
+                # it seems like the server will return 19002000 rather than 1 now, if the live room does not exist
+                logger.warning(f"bilibili api ResponseCodeException code={e.code} message={e.message}")
+                self.room_records[room_id].is_valid = False
+                await self.sendWarningMessage(f"直播間 {room_id} 出現錯誤，已禁用： {e.code}: {e.message}")
+            else:   # code -352: well
+                logger.info(f"Room {room_id}: bilibili api -352, continue")
         except HTTPStatusError as e:
             # bilibili api weird situation
             # i've encountered 504 before and i don't know why 
             if (e.error_type == "Server error"):
-                logger.warning(f"bilibili api http status {e.status_code}: {e.error_type}, will resume after 5s")
-                await sleep(5)
+                logger.warning(f"bilibili api http status {e.status_code}: {e.error_type}, will resume after 10s")
+                await sleep(10)
             else:
                 # 什么情况
                 error_text = f"bilibili api unexpected http status {e.status_code}: {e.error_type}"
                 logger.error(error_text)
-                if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
-                    await self.sendDebugMessage(error_text)
                 exit(1)
-        except NetworkError:
+        except NetworkError as e:
             # bilibili api network error
-            logger.warning(f"bilibili api NetworkError, will resume after 5s")
-            await sleep(5)
+            logger.warning(f"bilibili api NetworkError, will resume after 10s")
+            if e.e != None:
+                logger.warning(f"Maybe unexpected error: {traceback.format_exc()}")
+            await sleep(10)
         except telegram.error.BadRequest as e:
             # telegram bad request
             if str(e) == "Chat not found":
@@ -210,36 +209,21 @@ class BilibiliLiveNotificationBot():
                 exit(1)
         except telegram.error.NetworkError:
             # telegram NetworkError error
-            logger.warning("Telegram NetworkError exception, will resume after 5s")
-            await sleep(5)
+            logger.warning("Telegram NetworkError exception, will resume after 10s")
+            await sleep(10)
         # 什麼情況
         except Exception:
             error_text = f"Unexpected error during updating room information: {traceback.format_exc()}"
             logger.error(error_text)
-            if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
-                await self.sendDebugMessage(error_text)
             exit(1)
 
-    # rate limit: 50/1min
-    async def getRoomInfoWithRateLimit(self, room: LiveRoom):
+    async def getRoomInfo(self, room: LiveRoom):
 
         """
-            我不知道有沒有這個rate limit啊，就當它有吧
+            獲取直播間信息
         """
 
-        await self.rate_limiter.acquire()
         return await room.get_room_info()
-
-    async def sendDebugMessage(self, message: str):
-
-        """
-            sendDebugMessage（捧讀
-        """
-
-        if message == "":
-            await self.tg_bot.sendMessage(self.chat_id, "test message")
-        else:
-            await self.tg_bot.sendMessage(self.chat_id, message)
   
     async def sendWarningMessage(self, message: str=""):
 
@@ -248,7 +232,17 @@ class BilibiliLiveNotificationBot():
         """
 
         text = f"Warning: {message}"
-        await self.tg_bot.sendMessage(self.chat_id, text)
+        count = 3
+        while count > 0:
+            try:
+                await self.tg_bot.sendMessage(self.chat_id, text)
+                logger.warning("warning message sent: " + message)
+                return
+            except Exception:
+                count -= 1
+        logger.warning("failed to send warning message after retrying 3 times")
+
+
 
     async def sendLiveStartMessage(self, record: RoomRecord) -> Message:
 

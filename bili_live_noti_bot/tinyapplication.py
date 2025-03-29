@@ -97,14 +97,12 @@ class TinyApplication():
                 await self.updater.bot.setMyCommands(bot_commands)
                 break
             except telegram.error.NetworkError:
-                logger.warning(f"NetworkError exception when setting bot command, will retry after 5s")
-                await sleep(5)
+                logger.warning(f"NetworkError exception when setting bot command, will retry after 10s")
+                await sleep(10)
             # 什麼情況
             except Exception:
                 error_text = f"Unexpected error when setting bot commands: {traceback.format_exc()}"
                 logger.error(error_text)
-                if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
-                    await self.owner.sendDebugMessage(error_text)
                 exit(1)
 
         while True:
@@ -118,19 +116,17 @@ class TinyApplication():
                     update = await self.update_queue.get()
                     await self.handleUpdate(update)
             except telegram.error.NetworkError:
-                logger.warning("NetworkError exception when polling updates, will shutdown and restart after 5s")
+                logger.warning("NetworkError exception when polling updates, will shutdown and restart after 10s")
                 if self.updater.running:
                     await self.updater.stop()
                 if self.updater._initialized:
                     await self.updater.shutdown()
-                await sleep(5)
+                await sleep(10)
                 continue
             # 什麼情況
             except Exception:
                 error_text = f"Unexpected error when polling updates: {traceback.format_exc()}"
                 logger.error(error_text)
-                if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
-                    await self.owner.sendDebugMessage(error_text)
                 exit(1)
 
 class CommandHandler():

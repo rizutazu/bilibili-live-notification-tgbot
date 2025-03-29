@@ -17,7 +17,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.54",
     "Referer": "https://www.bilibili.com",
 }
-# curl --header "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.54" -- header "Referer: https://www.bilibili.com" https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=
+# curl --header "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.54" --header "Referer: https://www.bilibili.com" https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=
 
 class LiveRoom():
     
@@ -42,10 +42,10 @@ class LiveRoom():
             result = json.loads(response.text)
         except httpx.HTTPStatusError:
             raise HTTPStatusError(response.status_code)
-        except httpx.NetworkError:
+        except (httpx.NetworkError, httpx.TimeoutException):
             raise NetworkError()
-        except httpx.TimeoutException:
-            raise NetworkError()
+        except Exception as e:
+            raise NetworkError(e)
 
         code = result.get("code")
         if code == None:
@@ -84,3 +84,5 @@ class NetworkError(Exception):
     """
         Any NetWork exception
     """
+    def __init__(self, e: Exception=None):
+        self.e = e
