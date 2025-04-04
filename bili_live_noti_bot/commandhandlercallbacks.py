@@ -1,5 +1,6 @@
 from .tinyapplication import TinyApplication
 from telegram import Update
+from .util import isValidPositiveInt
 
 """
     handlefunctions.py: sets of CommandHandler callback functions
@@ -32,7 +33,7 @@ async def handleList(update: Update, caller: TinyApplication, argument: str):
 
 async def handleSubscribe(update: Update, caller: TinyApplication, argument: str):
 
-    if not (argument.isnumeric() and argument.isascii()):
+    if not isValidPositiveInt(argument):
         await update.message.reply_text("請給出有效的直播間號")
     else:
         rooms = await caller.owner.getSubscribedRooms()
@@ -45,7 +46,7 @@ async def handleSubscribe(update: Update, caller: TinyApplication, argument: str
 
 async def handleUnsubscribe(update: Update, caller: TinyApplication, argument: str):
 
-    if not (argument.isnumeric() and argument.isascii()):
+    if not isValidPositiveInt(argument):
         await update.message.reply_text("請給出有效的直播間號")
     else:
         rooms = await caller.owner.getSubscribedRooms()
@@ -69,7 +70,7 @@ async def handleInterval(update: Update, caller: TinyApplication, argument: str)
 
     if argument == "":  
         await update.message.reply_text(f"當前的輪詢間隔為 {old_interval}s")
-    elif not (argument.isnumeric() and argument.isascii()):
+    elif not isValidPositiveInt(argument):
         await update.message.reply_text("請給出有效的輪詢間隔")
     else:
         new_interval = int(argument)

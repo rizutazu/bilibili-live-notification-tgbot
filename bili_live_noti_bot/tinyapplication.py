@@ -88,6 +88,8 @@ class TinyApplication():
             帶異常自動恢復（可用性存疑）
         """
 
+
+        await sleep(0)
         while True:
             try:
                 bot_commands = []

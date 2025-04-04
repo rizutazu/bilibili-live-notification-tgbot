@@ -2,7 +2,7 @@
     "tgbot_token": "114514:aabbccdd",
     "tg_chat_id": "114514",
     "timezone": "Asia/Shanghai",
-    "poll_interval": 10,
+    "poll_interval": 15,
     "subscribed_rooms": [
         "114",
         "1", 

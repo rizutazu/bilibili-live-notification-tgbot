@@ -10,13 +10,18 @@ from datetime import datetime
         [20, 30): 直播中, 標題隨時間變動, 修改分區名稱 
 '''
 class LiveRoom():
-    def __init__(self, room_id: int) -> None:
-        self.room_id: str = str(room_id)
+    def __init__(self) -> None:
         self.start_time: float = 0
         self.last_sent_title: str = ""
         self.last_sent_area: tuple[str, str] = ("", "")
 
-    async def get_room_info(self) -> dict:
+    def add_room(self, room_id: str):
+        pass
+
+    def remove_room(self, room_id: str):
+        pass
+
+    async def get_room_info(self, room_id: str) -> dict:
         second_now = datetime.now().second % 30
         if second_now >= 0 and second_now < 10:
             live_status = 0
@@ -26,14 +31,14 @@ class LiveRoom():
             self.start_time = 0
         elif second_now >= 10 and second_now < 20:
             live_status = 1
-            title = "rtitle" + self.room_id + "title v" + str(second_now)
+            title = "rtitle" + room_id + "title v" + str(second_now)
             p_area = "父分區"
             area = "子分區"
             if self.start_time == 0:
                 self.start_time = datetime.now().timestamp() - 10
         else:
             live_status = 1
-            title = "rtitle" + self.room_id + "title v" + str(second_now)
+            title = "rtitle" + room_id + "title v" + str(second_now)
             p_area = "父分區區"
             area = "子分區區"
             if self.start_time == 0:
@@ -51,7 +56,7 @@ class LiveRoom():
             },
             "anchor_info": {
                 "base_info": {
-                    "uname": "username" + self.room_id + "username"
+                    "uname": "username" + room_id + "username"
                 }
             }
         }

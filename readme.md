@@ -133,7 +133,7 @@ Bilibili live notification bot 已啟動。
     "timezone": "Asia/Shanghai",
     // 用於指定開播提醒中時間的時區，可選變數列表參見pytz timezone list
 
-    "poll_interval": 10,
+    "poll_interval": 15,
     // 輪詢間隔，用於指定 完整查詢一輪所有關注了的直播間的狀態間 的間隔，單位：秒
     // 儘量別太短，雖然太短會怎樣我也不知道
 
@@ -165,9 +165,3 @@ Bilibili live notification bot 已啟動。
 5. 啟動
 
 `python -m bili_live_noti_bot`
-
-## FAQ
-
-- `Warning: 直播間 XXX 出現錯誤，已禁用： 19002000: 获取初始化数据失败` 是什麼意思？
-  - 在大多數情況下這意味著直播間不存在，請檢查直播間號是否輸入正確；
-  - **但在極少數隨機情況下是因為bilibili接口抽風了，並非真的不存在**。bot無法區分這兩種情況，就全都當作不存在處理了。如果出現這種情況還請使用`/subscribe` 重新加回訂閱列表。

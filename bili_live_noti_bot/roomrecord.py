@@ -1,5 +1,4 @@
 from __future__ import annotations
-from .liveroom import LiveRoom
 from telegram import Message, constants
 from telegram.helpers import escape_markdown
 from datetime import datetime
@@ -14,10 +13,7 @@ class RoomRecord():
     def __init__(self, room_id: str) -> None:
 
         # bot-related
-        self.room: LiveRoom = None                  # live.LiveRoom instance
         self.is_valid: bool = True                  # 是否為有效直播間
-
-        
 
         # variables that associated with specific live
         self.message_sent: Message = None           # 已經發送的通知消息，用於在直播結束時修改
@@ -88,17 +84,6 @@ class RoomRecord():
 
         self.cover_url = new_record.cover_url
         self.area_name_pair = new_record.area_name_pair
-
-    # def logUserInfo(self, new_record: RoomRecord):
-
-    #     """
-    #         更新主播信息
-    #     """
-
-    #     self.is_living = new_record.is_living   # for /list return
-    #     self.uid = new_record.uid
-    #     self.uname = new_record.uname
-    #     self.current_room_title = new_record.current_room_title
 
     def liveEnd(self):    # 清空狀態
 

@@ -10,7 +10,7 @@ import logging
 import os
 import traceback
 
-from .liveroom import HTTPStatusError, NetworkError, ResponseCodeException
+from .liveroom import HTTPStatusError, NetworkError, CodeFieldException, RoomNotExistException
 
 # test flag: use DummyLiveRoom to examine the functionality
 if os.getenv("BILILIVENOTIBOT_TEST") != None:
@@ -21,6 +21,7 @@ else:
 from .tinyapplication import TinyApplication, CommandHandler
 from .roomrecord import RoomRecord
 from .commandhandlercallbacks import *
+from .util import isValidPositiveInt
 
 
 logger = logging.getLogger("BilibiliLiveNotificationBot")
@@ -47,8 +48,8 @@ class BilibiliLiveNotificationBot():
         self.app = TinyApplication(self.tg_bot, self)
 
         # subscribe configs
-        self.subscribed_rooms: list[str] = []   # room ids
         self.room_records: dict[str, RoomRecord] = {}
+        self.liveroom: LiveRoom = LiveRoom()
 
         # locks
         self.config_lock = Lock()
@@ -57,40 +58,40 @@ class BilibiliLiveNotificationBot():
         # specify the display timezone of live_start_time 
         self.timezone = timezone(timezone_str)
 
-    async def subscribeRooms(self, rooms: list[str]):
+    async def subscribeRooms(self, room_ids: list[str]):
 
         """
             添加關注的直播間
         """
 
+        await sleep(0)
         await self.config_lock.acquire()
-        rooms = [room for room in rooms if (room.isnumeric() and room.isascii())]
-        rooms = list(set(rooms))
-        self.subscribed_rooms.extend(rooms)
-        for room_id in rooms:
+        room_ids = [room_id for room_id in room_ids if isValidPositiveInt(room_id)]
+        room_ids = list(set(room_ids))
+        for room_id in room_ids:
             if self.room_records.get(room_id) == None:
                 self.room_records[room_id] = RoomRecord(room_id)
-            if self.room_records[room_id].room == None:
-                self.room_records[room_id].room = LiveRoom(room_id)
+                self.liveroom.add_room(room_id)
         self.config_lock.release()
 
-        if rooms != []:
-            logger.info(f"Subscribe rooms: {rooms}")
+        if room_ids != []:
+            logger.info(f"Subscribe rooms: {room_ids}")
 
-    async def unsubscribeRooms(self, rooms: list[str]):
+    async def unsubscribeRooms(self, room_ids: list[str]):
         
         """
             刪除關注的直播間
         """
 
+        await sleep(0)
         await self.config_lock.acquire()
-        for room_id in rooms:
-            if room_id in self.subscribed_rooms:
-                self.subscribed_rooms.remove(room_id)
+        for room_id in room_ids:
+            if self.room_records.get(room_id) != None:
                 del self.room_records[room_id]
+                self.liveroom.remove_room(room_id)
         self.config_lock.release()
         
-        logger.info(f"Unsubscribe rooms: {rooms}")
+        logger.info(f"Unsubscribe rooms: {room_ids}")
 
     async def getSubscribedRooms(self) -> dict[str, RoomRecord]:
 
@@ -98,8 +99,9 @@ class BilibiliLiveNotificationBot():
             獲取關注的直播間的列表
         """
 
+        await sleep(0)
         await self.config_lock.acquire()
-        ret = self.room_records
+        ret = self.room_records.copy()
         self.config_lock.release()
         return ret
 
@@ -113,7 +115,7 @@ class BilibiliLiveNotificationBot():
         await self.config_lock.acquire()
         mark_delete = [room_id for room_id, record in self.room_records.items() if not record.is_valid]
         for room_id in mark_delete:
-            self.subscribed_rooms.remove(room_id)
+            self.liveroom.remove_room(room_id)
             del self.room_records[room_id]
         self.config_lock.release()
         if mark_delete != []:
@@ -128,8 +130,9 @@ class BilibiliLiveNotificationBot():
             `LiveRecord` 只在消息發送成功後才進行更新，不知道有沒有意義
         """
 
+        await sleep(0)
         # maybe async race condition?
-        if room_id not in self.subscribed_rooms or self.room_records.get(room_id) == None:
+        if self.room_records.get(room_id) == None:
             return
 
         # skip invalid room
@@ -137,12 +140,10 @@ class BilibiliLiveNotificationBot():
             return
 
         try:
-            result = await self.getRoomInfo(self.room_records[room_id].room)
+            result = await self.getRoomInfo(room_id)
 
             new_record = RoomRecord(room_id)
             new_record.parseResult(result)
-
-            logger.info(f"Retrieved room info: room_id={room_id}, uname={new_record.uname}, is_living={new_record.is_living}")
 
             # update record && action
             # state change matrix of is_living:
@@ -173,15 +174,10 @@ class BilibiliLiveNotificationBot():
                     await self.markSentLiveMessageAsEnd(current_record)
                     current_record.liveEnd()
                     
-        except ResponseCodeException as e:
-            if e.code != -352:
-                # live room may not exist
-                # it seems like the server will return 19002000 rather than 1 now, if the live room does not exist
-                logger.warning(f"bilibili api ResponseCodeException code={e.code} message={e.message}")
-                self.room_records[room_id].is_valid = False
-                await self.sendWarningMessage(f"直播間 {room_id} 出現錯誤，已禁用： {e.code}: {e.message}")
-            else:   # code -352: well
-                logger.info(f"Room {room_id}: bilibili api -352, continue")
+        except RoomNotExistException:
+            logger.warning(f"bilibili api RoomNotExistException")
+            self.room_records[room_id].is_valid = False
+            await self.sendWarningMessage(f"直播間 {room_id} 不存在，已禁用")
         except HTTPStatusError as e:
             # bilibili api weird situation
             # i've encountered 504 before and i don't know why 
@@ -211,19 +207,28 @@ class BilibiliLiveNotificationBot():
             # telegram NetworkError error
             logger.warning("Telegram NetworkError exception, will resume after 10s")
             await sleep(10)
+
+        except CodeFieldException as e:
+            error_text = f"bilibili api CodeFieldException: {e.code}: {e.message}"
+            logger.error(error_text)
+            # nooooooooooooooooooooo
+            await self.sendWarningMessage(f"bilibili api 出错，bot即将退出： {e.code}: {e.message}。请将以上信息发送给开发者。")
+            exit(1)
         # 什麼情況
-        except Exception:
+        except Exception as e:
             error_text = f"Unexpected error during updating room information: {traceback.format_exc()}"
             logger.error(error_text)
+            await self.sendWarningMessage(f"bot 发生意外错误： {traceback.format_exc()}。请将以上信息发送给开发者。")
             exit(1)
 
-    async def getRoomInfo(self, room: LiveRoom):
+    async def getRoomInfo(self, room_id: str):
 
         """
             獲取直播間信息
         """
 
-        return await room.get_room_info()
+        await sleep(0)
+        return await self.liveroom.get_room_info(room_id)
   
     async def sendWarningMessage(self, message: str=""):
 
@@ -231,6 +236,7 @@ class BilibiliLiveNotificationBot():
             sendWarningMessage（捧讀
         """
 
+        await sleep(0)
         text = f"Warning: {message}"
         count = 3
         while count > 0:
@@ -251,6 +257,7 @@ class BilibiliLiveNotificationBot():
             返回發送的消息，用於後續更新/標記結束
         """
 
+        await sleep(0)
         text = record.generateMessageText(self.timezone)
         option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
 
@@ -262,6 +269,7 @@ class BilibiliLiveNotificationBot():
             更新發送的消息
         """
 
+        await sleep(0)
         if record.message_sent != None:
 
             text = record.generateMessageText(self.timezone)
@@ -277,6 +285,7 @@ class BilibiliLiveNotificationBot():
             標記結束，記錄結束時間
         """
 
+        await sleep(0)
         record.stop_time = datetime.now().astimezone(utc)
         await self.modifySentLiveMessage(record)
  
@@ -305,9 +314,10 @@ class BilibiliLiveNotificationBot():
             輪詢更新直播間狀態
         """
 
+        await sleep(0)
         logger.info("Start subscribing live rooms")
         while True:
-            for room_id in self.subscribed_rooms:
+            for room_id in self.room_records.keys():
                 await self.config_lock.acquire()
                 await self.updateRoomInformation(room_id)
                 self.config_lock.release()
