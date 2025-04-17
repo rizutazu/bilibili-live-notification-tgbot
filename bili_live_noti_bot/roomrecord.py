@@ -3,6 +3,9 @@ from telegram import Message, constants
 from telegram.helpers import escape_markdown
 from datetime import datetime
 from pytz import utc, BaseTzInfo
+import logging
+
+logger = logging.getLogger("RoomRecord")
 
 class RoomRecord():
     """
@@ -31,6 +34,9 @@ class RoomRecord():
         self.history_room_titles: list[str] = []    # 直播間用過的標題的列表，不含當前在用的，按時間從早到晚排序
         self.start_time: datetime = None            # 開始直播的時間
         self.stop_time: datetime = None             # 上一次直播結束時間，只在未開播時有效
+
+        # snapshot
+        self.snapshot: dict = {}
         
     def parseResult(self, result: dict):
 
@@ -60,13 +66,15 @@ class RoomRecord():
             and self.cover_url == new_record.cover_url \
             and self.area_name_pair == new_record.area_name_pair)
 
-    def updateRecord(self, new_record: RoomRecord, update_title_history: bool=False, update_start_time: bool=True):
+    def tryUpdateRecord(self, new_record: RoomRecord, update_title_history: bool=False, update_start_time: bool=True):
 
         """
-            以從API獲取到的新記錄更新自身。
+            以從API獲取到的新記錄尝试更新自身, 配合commitUpdateRecord使用，否則更新會回滾。
             update_title_history：是否要根據新紀錄的標題更新歷史標題記錄
             update_start_time：是否要更新開始時間（可能為0）
         """
+
+        self.takeSnapshot()
 
         # basic info
         self.uid = new_record.uid
@@ -76,7 +84,6 @@ class RoomRecord():
         # room title && history title log
         if update_title_history and self.current_room_title != None and self.current_room_title != new_record.current_room_title:
             self.history_room_titles.append(self.current_room_title)
-            print(self.history_room_titles)
         self.current_room_title = new_record.current_room_title
 
         if update_start_time:
@@ -84,6 +91,53 @@ class RoomRecord():
 
         self.cover_url = new_record.cover_url
         self.area_name_pair = new_record.area_name_pair
+
+    def commitUpdateRecord(self):
+        
+        """
+            commit update
+        """
+
+        self.snapshot = {}
+
+    def takeSnapshot(self):
+
+        """
+            take a snapshot before update coz sendMessage may error
+        """
+
+        self.snapshot = {
+            "magic": "snapshot",
+            "uid": self.uid,
+            "uname": self.uname,
+            "is_living": self.is_living,
+            "history_room_titles": self.history_room_titles.copy(),
+            "current_room_title": self.current_room_title,
+            "start_time": self.start_time,
+            "cover_url": self.cover_url,
+            "area_name_pair": self.area_name_pair
+        }
+
+    def restoreSnapshot(self):
+
+        """
+            restore snapshot
+        """
+
+        if self.snapshot.get("magic") == "snapshot":
+
+            logger.info(f"restore snapshot for uid {self.uid}")
+            
+            self.uid = self.snapshot["uid"]
+            self.uname = self.snapshot["uname"]
+            self.is_living = self.snapshot["is_living"]
+            self.history_room_titles = self.snapshot["history_room_titles"]
+            self.current_room_title = self.snapshot["current_room_title"]
+            self.start_time = self.snapshot["start_time"]
+            self.cover_url = self.snapshot["cover_url"]
+            self.area_name_pair = self.snapshot["area_name_pair"]
+
+            self.snapshot = {}
 
     def liveEnd(self):    # 清空狀態
 
@@ -137,6 +191,10 @@ class RoomRecord():
         return text
     
     def generateInfoText(self, timezone: BaseTzInfo) -> str:
+
+        """
+            generate tree-like summary text, used in /list
+        """
 
         if not self.is_valid:
             return ""

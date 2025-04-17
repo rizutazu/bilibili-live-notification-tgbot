@@ -21,10 +21,16 @@ HEADERS = {
 
 # operation must be atomic
 class LiveRoom():
+    """
+                LiveRoom class
+            bilibili api implementation, maintain fetched info 
+    """
 
     def __init__(self) -> None:
 
-        # "1": (cache_ready,
+        # "room_id": (
+        #   cache_ready: bool,
+        #
         #   {
         #     "valid": bool
         #     "room_info": {
@@ -42,17 +48,33 @@ class LiveRoom():
         #       }
         #     }
         #   }
+        #
         # )
         self.rooms: dict[str, tuple[bool, dict]] = {}
         self.httpx_client: httpx.AsyncClient = httpx.AsyncClient()
 
-    def add_room(self, room_id: str):
+    def addRoom(self, room_id: str):
+
+        """
+            add room to subscribe list, coz new api supports batch fetch
+        """
+
         self.rooms[room_id] = (False, {})
 
-    def remove_room(self, room_id: str):
-        del self.rooms[room_id]
+    def removeRoom(self, room_id: str):
 
-    async def update_room_info(self):
+        """
+            remove from subscribe list
+        """
+
+        if self.rooms.get(room_id) != None:
+            del self.rooms[room_id]
+
+    async def updateRoomInfo(self):
+
+        """
+            batch fetch room live status using api
+        """
 
         if len(self.rooms) == 0:
             return
@@ -119,13 +141,19 @@ class LiveRoom():
         return 
     
 
-    async def get_room_info(self, room_id: str) -> dict:
+    async def getRoomInfo(self, room_id: str) -> dict:
+        
+        """
+            Interface exposed to other modules, return room info of given room_id from cache.
+            Each method invocation will clear its corresponding cache, if it encountered cache miss,
+            updateRoomInfo() will be invoked for a complete subscribe list info update
+        """
         
         if room_id not in self.rooms.keys():
             raise Exception("room_id does not appear in room_ids")
         
         if not self.rooms[room_id][0]:
-            await self.update_room_info()
+            await self.updateRoomInfo()
 
         if self.rooms[room_id][1]["valid"]:
             result = self.rooms[room_id][1]

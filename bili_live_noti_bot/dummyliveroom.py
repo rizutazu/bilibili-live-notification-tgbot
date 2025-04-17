@@ -15,13 +15,13 @@ class LiveRoom():
         self.last_sent_title: str = ""
         self.last_sent_area: tuple[str, str] = ("", "")
 
-    def add_room(self, room_id: str):
+    def addRoom(self, room_id: str):
         pass
 
-    def remove_room(self, room_id: str):
+    def removeRoom(self, room_id: str):
         pass
 
-    async def get_room_info(self, room_id: str) -> dict:
+    async def getRoomInfo(self, room_id: str) -> dict:
         second_now = datetime.now().second % 30
         if second_now >= 0 and second_now < 10:
             live_status = 0

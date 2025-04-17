@@ -71,7 +71,7 @@ class BilibiliLiveNotificationBot():
         for room_id in room_ids:
             if self.room_records.get(room_id) == None:
                 self.room_records[room_id] = RoomRecord(room_id)
-                self.liveroom.add_room(room_id)
+                self.liveroom.addRoom(room_id)
         self.config_lock.release()
 
         if room_ids != []:
@@ -88,7 +88,7 @@ class BilibiliLiveNotificationBot():
         for room_id in room_ids:
             if self.room_records.get(room_id) != None:
                 del self.room_records[room_id]
-                self.liveroom.remove_room(room_id)
+                self.liveroom.removeRoom(room_id)
         self.config_lock.release()
         
         logger.info(f"Unsubscribe rooms: {room_ids}")
@@ -115,7 +115,7 @@ class BilibiliLiveNotificationBot():
         await self.config_lock.acquire()
         mark_delete = [room_id for room_id, record in self.room_records.items() if not record.is_valid]
         for room_id in mark_delete:
-            self.liveroom.remove_room(room_id)
+            self.liveroom.removeRoom(room_id)
             del self.room_records[room_id]
         self.config_lock.release()
         if mark_delete != []:
@@ -142,8 +142,8 @@ class BilibiliLiveNotificationBot():
         try:
             result = await self.getRoomInfo(room_id)
 
-            new_record = RoomRecord(room_id)
-            new_record.parseResult(result)
+            fetched_record = RoomRecord(room_id)
+            fetched_record.parseResult(result)
 
             # update record && action
             # state change matrix of is_living:
@@ -154,30 +154,35 @@ class BilibiliLiveNotificationBot():
             # send msg: 發送開播提醒
             # check diff: 檢查信息變動
             current_record = self.room_records[room_id]
+            current_record.restoreSnapshot()
 
             if current_record.is_living != True:        # 一開始沒在直播：啟動bot後的第一個狀態/not living
-                if new_record.is_living:                    # not living --> living, 發消息
+                if fetched_record.is_living:                    # not living --> living, 發消息
                     logger.info(f"Room {room_id}: send live start message")
-                    current_record.updateRecord(new_record)
-                    current_record.message_sent = await self.sendLiveStartMessage(new_record)
+                    current_record.tryUpdateRecord(fetched_record)
+                    current_record.message_sent = await self.sendLiveStartMessage(current_record)
+                    current_record.commitUpdateRecord()
                 else:                                       # not living --> not living，更新記錄
-                    current_record.updateRecord(new_record)
+                    current_record.tryUpdateRecord(fetched_record)
+                    current_record.commitUpdateRecord()
             else:                                       # 一開始在直播，檢查下一狀態：
-                if new_record.is_living:                    # 還在直播，檢查狀態更新
-                    if current_record.hasUpdate(new_record):
+                if fetched_record.is_living:                    # 還在直播，檢查狀態更新
+                    if current_record.hasUpdate(fetched_record):
                         logger.info(f"Room {room_id}: update sent message")
-                        current_record.updateRecord(new_record, update_title_history=True)  # 記錄標題變動
+                        current_record.tryUpdateRecord(fetched_record, update_title_history=True)  # 記錄標題變動
                         current_record.message_sent = await self.modifySentLiveMessage(current_record)
+                        current_record.commitUpdateRecord()
                 else:                                       # 沒在播了，清理信息和歷史標題
                     logger.info(f"Room {room_id}: live end, update sent message")
-                    current_record.updateRecord(new_record, update_start_time=False)    # 此時開始時間為0，避免覆蓋記錄的開始時間
+                    current_record.tryUpdateRecord(fetched_record, update_start_time=False)    # 此時開始時間為0，避免覆蓋記錄的開始時間
                     await self.markSentLiveMessageAsEnd(current_record)
+                    current_record.commitUpdateRecord()
                     current_record.liveEnd()
                     
         except RoomNotExistException:
             logger.warning(f"bilibili api RoomNotExistException")
             self.room_records[room_id].is_valid = False
-            await self.sendWarningMessage(f"直播間 {room_id} 不存在，已禁用")
+            await self.sendErrorMessage(f"直播間 {room_id} 不存在，已禁用")
         except HTTPStatusError as e:
             # bilibili api weird situation
             # i've encountered 504 before and i don't know why 
@@ -212,13 +217,13 @@ class BilibiliLiveNotificationBot():
             error_text = f"bilibili api CodeFieldException: {e.code}: {e.message}"
             logger.error(error_text)
             # nooooooooooooooooooooo
-            await self.sendWarningMessage(f"bilibili api 出错，bot即将退出： {e.code}: {e.message}。请将以上信息发送给开发者。")
+            await self.sendErrorMessage(f"bilibili api 出错，bot即将退出： {e.code}: {e.message}。请将以上信息发送给开发者。")
             exit(1)
         # 什麼情況
         except Exception as e:
             error_text = f"Unexpected error during updating room information: {traceback.format_exc()}"
             logger.error(error_text)
-            await self.sendWarningMessage(f"bot 发生意外错误： {traceback.format_exc()}。请将以上信息发送给开发者。")
+            await self.sendErrorMessage(f"bot 发生意外错误： {traceback.format_exc()}。请将以上信息发送给开发者。")
             exit(1)
 
     async def getRoomInfo(self, room_id: str):
@@ -228,25 +233,25 @@ class BilibiliLiveNotificationBot():
         """
 
         await sleep(0)
-        return await self.liveroom.get_room_info(room_id)
+        return await self.liveroom.getRoomInfo(room_id)
   
-    async def sendWarningMessage(self, message: str=""):
+    async def sendErrorMessage(self, message: str=""):
 
         """
-            sendWarningMessage（捧讀
+            sendErrorMessage（捧讀
         """
 
         await sleep(0)
-        text = f"Warning: {message}"
+        text = f"Error: {message}"
         count = 3
         while count > 0:
             try:
                 await self.tg_bot.sendMessage(self.chat_id, text)
-                logger.warning("warning message sent: " + message)
+                logger.warning("error message sent: " + message)
                 return
             except Exception:
                 count -= 1
-        logger.warning("failed to send warning message after retrying 3 times")
+        logger.warning("failed to send error message after retrying 3 times")
 
 
 

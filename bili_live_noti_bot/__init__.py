@@ -20,7 +20,7 @@ if os.getenv("BILILIVENOTIBOT_DEBUG") != None:
     print("======> Debug flag is set <======")
     special_flag = True
 
-MY_LOGGERS = ["TinyApplication", "BilibiliLiveNotificationBot", "LiveRoom"]
+MY_LOGGERS = ["TinyApplication", "BilibiliLiveNotificationBot", "LiveRoom", "RoomRecord"]
 
 for name in MY_LOGGERS:
     logger = logging.getLogger(name)
