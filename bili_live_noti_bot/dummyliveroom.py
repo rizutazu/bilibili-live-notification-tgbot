@@ -15,10 +15,10 @@ class LiveRoom():
         self.last_sent_title: str = ""
         self.last_sent_area: tuple[str, str] = ("", "")
 
-    def addRoom(self, room_id: str):
+    def addRoom(self, room_id: str) -> None:
         pass
 
-    def removeRoom(self, room_id: str):
+    def removeRoom(self, room_id: str) -> None:
         pass
 
     async def getRoomInfo(self, room_id: str) -> dict:

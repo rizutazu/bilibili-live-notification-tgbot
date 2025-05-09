@@ -6,6 +6,7 @@ from asyncio.locks import Lock
 from asyncio import sleep
 from datetime import datetime
 from pytz import timezone, utc
+from typing import NoReturn
 import logging
 import os
 import traceback
@@ -58,7 +59,7 @@ class BilibiliLiveNotificationBot():
         # specify the display timezone of live_start_time 
         self.timezone = timezone(timezone_str)
 
-    async def subscribeRooms(self, room_ids: list[str]):
+    async def subscribeRooms(self, room_ids: list[str]) -> None:
 
         """
             添加關注的直播間
@@ -77,7 +78,7 @@ class BilibiliLiveNotificationBot():
         if room_ids != []:
             logger.info(f"Subscribe rooms: {room_ids}")
 
-    async def unsubscribeRooms(self, room_ids: list[str]):
+    async def unsubscribeRooms(self, room_ids: list[str]) -> None:
         
         """
             刪除關注的直播間
@@ -93,7 +94,7 @@ class BilibiliLiveNotificationBot():
         
         logger.info(f"Unsubscribe rooms: {room_ids}")
 
-    async def getSubscribedRooms(self) -> dict[str, RoomRecord]:
+    async def getSubscribedRooms(self, room_ids: list[str]=None) -> dict[str, RoomRecord]:
 
         """
             獲取關注的直播間的列表
@@ -101,11 +102,17 @@ class BilibiliLiveNotificationBot():
 
         await sleep(0)
         await self.config_lock.acquire()
-        ret = self.room_records.copy()
+        if room_ids == None:
+            ret = self.room_records.copy()
+        else:
+            ret = {}
+            for room_id in room_ids:
+                if self.room_records.get(room_id) != None:
+                    ret[room_id] = self.room_records[room_id]
         self.config_lock.release()
         return ret
 
-    async def deleteInvalidRooms(self):
+    async def deleteInvalidRooms(self) -> None:
         
         """
             刪掉標記為invalid的直播間
@@ -121,13 +128,12 @@ class BilibiliLiveNotificationBot():
         if mark_delete != []:
             logger.info(f"Delete invalid rooms: {mark_delete}")
 
-    async def updateRoomInformation(self, room_id: str):
+    async def updateRoomInformation(self, room_id: str) -> None:
 
         """
             更新直播間信息
             使用 `LiveRecord` 記錄直播間有關狀態，包括開播時間、標題和分區等
             根據記錄的狀態判斷後續動作：發送開播消息/更新發送的消息/標記直播結束
-            `LiveRecord` 只在消息發送成功後才進行更新，不知道有沒有意義
         """
 
         await sleep(0)
@@ -226,16 +232,16 @@ class BilibiliLiveNotificationBot():
             await self.sendErrorMessage(f"bot 发生意外错误： {traceback.format_exc()}。请将以上信息发送给开发者。")
             exit(1)
 
-    async def getRoomInfo(self, room_id: str):
+    async def getRoomInfo(self, room_id: str) -> dict:
 
         """
-            獲取直播間信息
+            從api獲取直播間信息
         """
 
         await sleep(0)
         return await self.liveroom.getRoomInfo(room_id)
   
-    async def sendErrorMessage(self, message: str=""):
+    async def sendErrorMessage(self, message: str="") -> None:
 
         """
             sendErrorMessage（捧讀
@@ -252,8 +258,6 @@ class BilibiliLiveNotificationBot():
             except Exception:
                 count -= 1
         logger.warning("failed to send error message after retrying 3 times")
-
-
 
     async def sendLiveStartMessage(self, record: RoomRecord) -> Message:
 
@@ -284,7 +288,7 @@ class BilibiliLiveNotificationBot():
         
         return None
 
-    async def markSentLiveMessageAsEnd(self, record: RoomRecord):
+    async def markSentLiveMessageAsEnd(self, record: RoomRecord) -> None:
 
         """
             標記結束，記錄結束時間
@@ -294,7 +298,7 @@ class BilibiliLiveNotificationBot():
         record.stop_time = datetime.now().astimezone(utc)
         await self.modifySentLiveMessage(record)
  
-    async def appStart(self):
+    async def appStart(self) -> NoReturn:
 
         """
             receive and handle command message
@@ -313,7 +317,7 @@ class BilibiliLiveNotificationBot():
 
         await self.app.start()
 
-    async def subscribeStart(self):
+    async def subscribeStart(self) -> NoReturn:
 
         """
             輪詢更新直播間狀態

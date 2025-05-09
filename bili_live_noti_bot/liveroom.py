@@ -53,7 +53,7 @@ class LiveRoom():
         self.rooms: dict[str, tuple[bool, dict]] = {}
         self.httpx_client: httpx.AsyncClient = httpx.AsyncClient()
 
-    def addRoom(self, room_id: str):
+    def addRoom(self, room_id: str) -> None:
 
         """
             add room to subscribe list, coz new api supports batch fetch
@@ -61,7 +61,7 @@ class LiveRoom():
 
         self.rooms[room_id] = (False, {})
 
-    def removeRoom(self, room_id: str):
+    def removeRoom(self, room_id: str) -> None:
 
         """
             remove from subscribe list
@@ -70,7 +70,7 @@ class LiveRoom():
         if self.rooms.get(room_id) != None:
             del self.rooms[room_id]
 
-    async def updateRoomInfo(self):
+    async def updateRoomInfo(self) -> None:
 
         """
             batch fetch room live status using api
@@ -138,9 +138,7 @@ class LiveRoom():
             }
             logger.info(f"Retrieved room info: room_id={room_id}, uname={info["uname"]}, is_living={info["live_status"]}, live_start_time={live_start_time}")
             self.rooms[room_id] = (True, c)
-        return 
     
-
     async def getRoomInfo(self, room_id: str) -> dict:
         
         """

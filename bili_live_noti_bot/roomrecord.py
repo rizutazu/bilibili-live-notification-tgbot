@@ -38,7 +38,7 @@ class RoomRecord():
         # snapshot
         self.snapshot: dict = {}
         
-    def parseResult(self, result: dict):
+    def parseResult(self, result: dict) -> None:
 
         """
             parse results from bilibili api
@@ -66,7 +66,7 @@ class RoomRecord():
             and self.cover_url == new_record.cover_url \
             and self.area_name_pair == new_record.area_name_pair)
 
-    def tryUpdateRecord(self, new_record: RoomRecord, update_title_history: bool=False, update_start_time: bool=True):
+    def tryUpdateRecord(self, new_record: RoomRecord, update_title_history: bool=False, update_start_time: bool=True) -> None:
 
         """
             以從API獲取到的新記錄尝试更新自身, 配合commitUpdateRecord使用，否則更新會回滾。
@@ -92,7 +92,7 @@ class RoomRecord():
         self.cover_url = new_record.cover_url
         self.area_name_pair = new_record.area_name_pair
 
-    def commitUpdateRecord(self):
+    def commitUpdateRecord(self) -> None:
         
         """
             commit update
@@ -100,7 +100,7 @@ class RoomRecord():
 
         self.snapshot = {}
 
-    def takeSnapshot(self):
+    def takeSnapshot(self) -> None:
 
         """
             take a snapshot before update coz sendMessage may error
@@ -118,7 +118,7 @@ class RoomRecord():
             "area_name_pair": self.area_name_pair
         }
 
-    def restoreSnapshot(self):
+    def restoreSnapshot(self) -> None:
 
         """
             restore snapshot
@@ -139,7 +139,7 @@ class RoomRecord():
 
             self.snapshot = {}
 
-    def liveEnd(self):    # 清空狀態
+    def liveEnd(self) -> None:    # 清空狀態
 
         """
             直播結束，清空和一次直播關聯的條目

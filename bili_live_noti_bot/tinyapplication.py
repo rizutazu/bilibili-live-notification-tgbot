@@ -2,9 +2,9 @@ from __future__ import annotations
 from telegram.ext import Updater
 from asyncio import Queue, sleep
 from telegram import Bot, Message, MessageEntity, Update, BotCommand
+from typing import NoReturn
 import telegram.error
 import logging
-import os
 import re
 import traceback
 
@@ -29,7 +29,7 @@ class TinyApplication():
         self.command_handlers: dict[str, CommandHandler] = {}
         self.owner: BilibiliLiveNotificationBot = owner
 
-    def addCommandHandlers(self, command_handlers: list[CommandHandler]):
+    def addCommandHandlers(self, command_handlers: list[CommandHandler]) -> None:
 
         """
             添加CommandHandler對象
@@ -58,7 +58,7 @@ class TinyApplication():
         else:
             return ("", message.text)
 
-    async def handleUpdate(self, update: Update):
+    async def handleUpdate(self, update: Update) -> None:
 
         """
             處理接收到的bot update
@@ -81,13 +81,12 @@ class TinyApplication():
             logger.info(f"Run /{command} command handler")
             await command_handler.handle(update, self, argument)
 
-    async def start(self):
+    async def start(self) -> NoReturn:
 
         """
             啟動bot update監聽
             帶異常自動恢復（可用性存疑）
         """
-
 
         await sleep(0)
         while True:
@@ -147,7 +146,7 @@ class CommandHandler():
 
         return BotCommand(self.command, self.description)
     
-    async def handle(self, update: Update, caller: TinyApplication, argument: str):
+    async def handle(self, update: Update, caller: TinyApplication, argument: str) -> None:
 
         """
             callback函數的signature是：
