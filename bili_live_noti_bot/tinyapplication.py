@@ -62,25 +62,30 @@ class TinyApplication():
 
         """
             處理接收到的bot update
-            不是message類型，或者來源不是配置裡指定的chat_id均會被忽略
+            來源不是配置裡指定的chat_id會被忽略
             我好像沒打算把bot放群裡面？
         """
 
-        if update.message == None:
-            # update without effective message attribute will be ignored
+        if update.message != None and update.message.chat_id == int(self.owner.chat_id):
+            logger.info(f"New message: text={update.message.text}")
+            command, argument = self.parseCommand(update.message)
+        elif update.callback_query != None and update.callback_query.from_user.id == int(self.owner.chat_id):
+            logger.info(f"New message callback: {update.callback_query.data}")
+            # expected data: "cmd arg"
+            split = update.callback_query.data.split(" ")
+            command = split[0]
+            if len(split) > 1:
+                argument = split[1]
+            else:
+                argument = ""
+        else:
             return
-        if update.message.chat_id != int(self.owner.chat_id):
-            return
-        
-        # does not handle caption
-        logger.info(f"New message: text={update.message.text}")
-        
-        command, argument = self.parseCommand(update.message)
+
         command_handler = self.command_handlers.get(command)
         if command_handler != None:
             logger.info(f"Run /{command} command handler")
             await command_handler.handle(update, self, argument)
-
+            
     async def start(self) -> NoReturn:
 
         """

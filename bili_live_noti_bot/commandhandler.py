@@ -14,7 +14,8 @@ async def handleStart(update: Update, caller: TinyApplication, argument: str):
 輸入 /unsubscribe room_id 以將直播間移出訂閱列表；
 輸入 /interval 以顯示輪詢完整訂閱列表的間隔，
 輸入 /interval number_int 以修改這一間隔；
-輸入 /echo 以查看bot是否在運行
+輸入 /echo 以查看bot是否在運行；
+輸入 /frame room_id 以獲取直播間的關鍵幀
 """
     await update.message.reply_text(message)
 
@@ -79,3 +80,21 @@ async def handleInterval(update: Update, caller: TinyApplication, argument: str)
         else:
             caller.owner.poll_interval = new_interval
             await update.message.reply_text(f"已修改輪詢間隔： {old_interval}s ==> {new_interval}s")
+
+async def handleFrame(update: Update, caller: TinyApplication, argument: str):
+    if update.message != None:
+        reply_target = update.message
+    elif update.callback_query != None:
+        reply_target = update.callback_query.message
+    else:
+        return
+
+    url, msg = await caller.owner.getKeyFrameUrl(argument)
+    if msg != None:
+        await reply_target.reply_text(f"獲取關鍵幀失敗： {msg}")
+        return
+
+    await reply_target.reply_photo(photo=url, do_quote=True)
+        
+
+    

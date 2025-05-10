@@ -1,5 +1,5 @@
 from __future__ import annotations
-from telegram import Bot, Message, LinkPreviewOptions
+from telegram import Bot, Message, LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton
 import telegram.request
 import telegram.error
 from asyncio.locks import Lock
@@ -21,7 +21,7 @@ else:
 
 from .tinyapplication import TinyApplication, CommandHandler
 from .roomrecord import RoomRecord
-from .commandhandlercallbacks import *
+from .commandhandler import *
 from .util import isValidPositiveInt
 
 
@@ -223,13 +223,13 @@ class BilibiliLiveNotificationBot():
             error_text = f"bilibili api CodeFieldException: {e.code}: {e.message}"
             logger.error(error_text)
             # nooooooooooooooooooooo
-            await self.sendErrorMessage(f"bilibili api 出错，bot即将退出： {e.code}: {e.message}。请将以上信息发送给开发者。")
+            await self.sendErrorMessage(f"bilibili api 出错，bot即将退出： {e.code}: {e.message}\n请将以上信息发送给开发者。")
             exit(1)
         # 什麼情況
         except Exception as e:
             error_text = f"Unexpected error during updating room information: {traceback.format_exc()}"
             logger.error(error_text)
-            await self.sendErrorMessage(f"bot 发生意外错误： {traceback.format_exc()}。请将以上信息发送给开发者。")
+            await self.sendErrorMessage(f"bot 发生意外错误： {traceback.format_exc()}\n请将以上信息发送给开发者。")
             exit(1)
 
     async def getRoomInfo(self, room_id: str) -> dict:
@@ -240,6 +240,44 @@ class BilibiliLiveNotificationBot():
 
         await sleep(0)
         return await self.liveroom.getRoomInfo(room_id)
+    
+    async def getKeyFrameUrl(self, room_id: str) -> tuple[str, str]:
+
+        """
+            從api獲取給定直播間的關鍵幀的鏈接，返回[url, message]
+            成功時url為獲取到的http鏈接，message為None，
+            出錯時message為出錯信息
+        """
+
+        await sleep(0)
+
+        if room_id not in self.room_records.keys():
+            return (None, "不在訂閱列表中")
+        uid = self.room_records[room_id].uid
+
+        if uid == None:
+            return (None, "尚未完成狀態查詢")
+        logger.info(f"Found uid by room id: {room_id} -> {uid}")
+
+        if not self.room_records[room_id].is_living:
+            logger.info(f"Room {room_id}: not living")
+            return (None, "未開播")
+        
+        count = 3
+        while count > 0:
+            try:
+                url = await self.liveroom.getKeyFrameUrl(uid)
+                return (url, None)
+            except (HTTPStatusError, NetworkError):
+                count -= 1
+            except CodeFieldException as e:
+                return (None, f"api 出錯： {str(e)}")
+            except RoomNotExistException:
+                return (None, f"用戶 {uid} 不存在")
+            except Exception as e:
+                return (None, str(e))
+        logger.warning("Failed to get key frame after retrying 3 times")
+        return (None, "網路錯誤")
   
     async def sendErrorMessage(self, message: str="") -> None:
 
@@ -270,7 +308,9 @@ class BilibiliLiveNotificationBot():
         text = record.generateMessageText(self.timezone)
         option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
 
-        return await self.tg_bot.sendMessage(self.chat_id, text=text, parse_mode="MarkdownV2", link_preview_options=option)
+        m = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="獲取關鍵幀", callback_data=f"frame {record.room_id}")]])
+
+        return await self.tg_bot.sendMessage(self.chat_id, text=text, parse_mode="MarkdownV2", link_preview_options=option, reply_markup=m)
 
     async def modifySentLiveMessage(self, record: RoomRecord) -> Message:
 
@@ -283,8 +323,11 @@ class BilibiliLiveNotificationBot():
 
             text = record.generateMessageText(self.timezone)
             option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
-
-            return await record.message_sent.edit_text(text, parse_mode="MarkdownV2", link_preview_options=option)
+            if not record.is_living:
+                m = InlineKeyboardMarkup([[]])
+            else:
+                m = record.message_sent.reply_markup
+            return await record.message_sent.edit_text(text, parse_mode="MarkdownV2", link_preview_options=option, reply_markup=m)
         
         return None
 
@@ -310,7 +353,8 @@ class BilibiliLiveNotificationBot():
             CommandHandler("subscribe", "添加訂閱的直播間", handleSubscribe),
             CommandHandler("unsubscribe", "移出訂閱列表", handleUnsubscribe),
             CommandHandler("interval", "顯示，或修改對完整的訂閱列表的輪詢的間隔", handleInterval),
-            CommandHandler("echo", "還活著嗎", handleEcho)
+            CommandHandler("echo", "還活著嗎", handleEcho),
+            CommandHandler("frame", "獲取直播間的關鍵幀", handleFrame)
         ]
 
         self.app.addCommandHandlers(command_handlers)

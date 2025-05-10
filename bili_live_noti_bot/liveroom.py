@@ -11,7 +11,9 @@ logger = logging.getLogger("LiveRoom")
 """
 
 # api found at https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/live/info.md
-API = "https://api.live.bilibili.com/xlive/web-room/v1/index/getRoomBaseInfo"
+BASEINFOAPI = "https://api.live.bilibili.com/xlive/web-room/v1/index/getRoomBaseInfo"
+
+KEYFRAMEAPI = "https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids"
 
 # headers used in bilibili_api implementation
 HEADERS = {
@@ -85,7 +87,7 @@ class LiveRoom():
         }
 
         try:
-            response = await self.httpx_client.get(API, params=params, headers=HEADERS)
+            response = await self.httpx_client.get(BASEINFOAPI, params=params, headers=HEADERS)
             response.raise_for_status()
             responseContent = json.loads(response.text)
         except httpx.HTTPStatusError:
@@ -159,6 +161,37 @@ class LiveRoom():
             return result
         else:
             raise RoomNotExistException()
+        
+    async def getKeyFrameUrl(self, uid: str) -> str:
+
+        params = {
+            "uids[]": [int(uid)]
+        }
+
+        try:
+            response = await self.httpx_client.get(KEYFRAMEAPI, params=params, headers=HEADERS)
+            response.raise_for_status()
+            responseContent = json.loads(response.text)
+        except httpx.HTTPStatusError:
+            raise HTTPStatusError(response.status_code)
+        except (httpx.NetworkError, httpx.TimeoutException):
+            raise NetworkError()
+        except Exception as e:
+            raise NetworkError(e)
+        
+        code = responseContent.get("code")
+        if code == None:
+            raise CodeFieldException("response data does not contain code field")
+        elif code != 0:
+            logger.critical(responseContent.get("message"))
+            raise CodeFieldException(code, responseContent.get("message"))
+        
+        if responseContent["data"].get(uid) == None:
+            raise RoomNotExistException()
+        else:
+            url = responseContent["data"][uid]["keyframe"]
+            logger.info(f"Retrieved key frame url of user {uid}: {url}")
+            return url
 
 class RoomNotExistException(Exception):
     pass

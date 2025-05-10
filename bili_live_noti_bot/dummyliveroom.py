@@ -64,3 +64,6 @@ class LiveRoom():
         self.last_sent_area = (p_area, area)
         print(f"Dummy LiveRoom: live_status: {live_status} title: {title} specified time: {self.start_time} area/biede: {p_area}-{p_area}")
         return data
+    
+    async def getKeyFrameUrl(self, room_id: str) -> str:
+        return "https://pbs.twimg.com/media/GZmju6EaIAAT1C0?format=jpg&name=medium"

@@ -44,7 +44,7 @@ class RoomRecord():
             parse results from bilibili api
         """
 
-        self.uid = result["room_info"]["uid"]
+        self.uid = str(result["room_info"]["uid"])
         self.uname = result["anchor_info"]["base_info"]["uname"]
         self.is_living = result["room_info"]["live_status"] == 1
         self.current_room_title = result["room_info"]["title"]
