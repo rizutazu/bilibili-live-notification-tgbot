@@ -86,6 +86,7 @@ async def handleFrame(update: Update, caller: TinyApplication, argument: str):
         reply_target = update.message
     elif update.callback_query != None:
         reply_target = update.callback_query.message
+        await update.callback_query.answer()
     else:
         return
 
