@@ -16,6 +16,8 @@ Telegram bilibili直播開播提醒bot
 
 - 自動刪除無效的訂閱直播間
 
+- 獲取正在直播的直播間的關鍵幀
+
 - 記錄開播時間、結束時間、直播時長、標題變動。樣式如下：
 
 *直播中*
@@ -70,7 +72,8 @@ Bilibili live notification bot 已啟動。
 輸入 /unsubscribe room_id 以將直播間移出訂閱列表；
 輸入 /interval 以顯示輪詢完整訂閱列表的間隔，
 輸入 /interval number_int 以修改這一間隔；
-輸入 /echo 以查看bot是否在運行
+輸入 /echo 以查看bot是否在運行;
+輸入 /frame room_id 以獲取直播間的關鍵幀
 ```
 
 **注意：你需要向bot發送`/start`後才能接收到提醒消息。**
