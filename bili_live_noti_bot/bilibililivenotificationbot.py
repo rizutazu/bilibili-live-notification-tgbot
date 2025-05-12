@@ -267,6 +267,8 @@ class BilibiliLiveNotificationBot():
         while count > 0:
             try:
                 url = await self.liveroom.getKeyFrameUrl(uid)
+                if url == "":
+                    return (None, "開播時間過短，尚無關鍵幀，請稍後再試")
                 return (url, None)
             except (HTTPStatusError, NetworkError):
                 count -= 1

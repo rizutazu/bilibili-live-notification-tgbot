@@ -190,7 +190,10 @@ class LiveRoom():
             raise RoomNotExistException()
         else:
             url = responseContent["data"][uid]["keyframe"]
-            logger.info(f"Retrieved key frame url of user {uid}: {url}")
+            if url != "":
+                logger.info(f"Retrieved key frame url of user {uid}: {url}")
+            else:
+                logger.info(f"Key frame url is empty string")
             return url
 
 class RoomNotExistException(Exception):
