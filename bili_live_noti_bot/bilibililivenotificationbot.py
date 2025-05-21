@@ -206,6 +206,16 @@ class BilibiliLiveNotificationBot():
             if e.e != None:
                 logger.warning(f"Maybe unexpected error: {traceback.format_exc()}")
             await sleep(10)
+        except CodeFieldException as e:
+            error_text = f"bilibili api CodeFieldException: {e.code}: {e.message}"
+            logger.error(error_text)
+            # nooooooooooooooooooooo
+            if e.code != -500:
+                await self.sendErrorMessage(f"bilibili api 出錯，bot即將退出： {e.code}: {e.message}\n請將以上信息發送給開發者。")
+                exit(1)
+            else:
+                logger.warning("bilibili api server error, will resume after 10s")
+                await sleep(10)
         except telegram.error.BadRequest as e:
             # telegram bad request
             if str(e) == "Chat not found":
@@ -218,18 +228,11 @@ class BilibiliLiveNotificationBot():
             # telegram NetworkError error
             logger.warning("Telegram NetworkError exception, will resume after 10s")
             await sleep(10)
-
-        except CodeFieldException as e:
-            error_text = f"bilibili api CodeFieldException: {e.code}: {e.message}"
-            logger.error(error_text)
-            # nooooooooooooooooooooo
-            await self.sendErrorMessage(f"bilibili api 出错，bot即将退出： {e.code}: {e.message}\n请将以上信息发送给开发者。")
-            exit(1)
         # 什麼情況
         except Exception as e:
             error_text = f"Unexpected error during updating room information: {traceback.format_exc()}"
             logger.error(error_text)
-            await self.sendErrorMessage(f"bot 发生意外错误： {traceback.format_exc()}\n请将以上信息发送给开发者。")
+            await self.sendErrorMessage(f"bot 发生意外错误： {traceback.format_exc()}\n請將以上信息發送給開發者。")
             exit(1)
 
     async def getRoomInfo(self, room_id: str) -> dict:
@@ -273,7 +276,7 @@ class BilibiliLiveNotificationBot():
             except (HTTPStatusError, NetworkError):
                 count -= 1
             except CodeFieldException as e:
-                return (None, f"api 出錯： {str(e)}")
+                return (None, f"api 出錯： {e.code}: {e.message}")
             except RoomNotExistException:
                 return (None, f"用戶 {uid} 不存在")
             except Exception as e:

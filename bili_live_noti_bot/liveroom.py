@@ -101,7 +101,7 @@ class LiveRoom():
         if code == None:
             raise CodeFieldException("response data does not contain code field")
         elif code != 0:
-            logger.critical(responseContent.get("message"))
+            logger.critical(f"updateRoomInfo: {code}: {responseContent.get('message')}")
             raise CodeFieldException(code, responseContent.get("message"))
         
         results = responseContent["data"]["by_room_ids"]
@@ -183,7 +183,7 @@ class LiveRoom():
         if code == None:
             raise CodeFieldException("response data does not contain code field")
         elif code != 0:
-            logger.critical(responseContent.get("message"))
+            logger.critical(f"getKeyFrameUrl: {code}: {responseContent.get('message')}")
             raise CodeFieldException(code, responseContent.get("message"))
         
         if responseContent["data"].get(uid) == None:
