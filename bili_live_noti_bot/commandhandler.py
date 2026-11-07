@@ -47,16 +47,26 @@ async def handleSubscribe(update: Update, caller: TinyApplication, argument: str
 
 async def handleUnsubscribe(update: Update, caller: TinyApplication, argument: str):
 
-    if not isValidPositiveInt(argument):
-        await update.message.reply_text("請給出有效的直播間號")
+    # handle button click
+    if update.message != None:
+        reply_target = update.message
+    elif update.callback_query != None:
+        reply_target = update.callback_query.message
+        await update.callback_query.answer()
     else:
-        rooms = await caller.owner.getSubscribedRooms()
+        return
+    
+    if not isValidPositiveInt(argument):
+        await reply_target.reply_text("請給出有效的直播間號")
+        return
 
-        if argument not in rooms.keys():
-            await update.message.reply_text(f"直播間 {argument} 不在訂閱列表中")
-        else:
-            await caller.owner.unsubscribeRooms([argument])
-            await update.message.reply_text(f"已移除直播間 {argument}")
+    rooms = await caller.owner.getSubscribedRooms()
+
+    if argument not in rooms.keys():
+        await reply_target.reply_text(f"直播間 {argument} 不在訂閱列表中")
+    else:
+        await caller.owner.unsubscribeRooms([argument])
+        await reply_target.reply_text(f"已移除直播間 {argument}")
 
 async def handleEcho(update: Update, caller: TinyApplication, argument: str):
 

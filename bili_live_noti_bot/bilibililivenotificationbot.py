@@ -313,7 +313,8 @@ class BilibiliLiveNotificationBot():
         text = record.generateMessageText(self.timezone)
         option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
 
-        m = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="獲取關鍵幀", callback_data=f"frame {record.room_id}")]])
+        m = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="獲取關鍵幀", callback_data=f"frame {record.room_id}")],
+                                                  [InlineKeyboardButton(text="移除該訂閱", callback_data=f"unsubscribe {record.room_id}")]])
 
         return await self.tg_bot.sendMessage(self.chat_id, text=text, parse_mode="MarkdownV2", link_preview_options=option, reply_markup=m)
 
@@ -329,7 +330,7 @@ class BilibiliLiveNotificationBot():
             text = record.generateMessageText(self.timezone)
             option = LinkPreviewOptions(prefer_large_media=True, show_above_text=True, url=record.cover_url)
             if not record.is_living:
-                m = InlineKeyboardMarkup([[]])
+                m = InlineKeyboardMarkup([[InlineKeyboardButton(text="移除該訂閱", callback_data=f"unsubscribe {record.room_id}")]])
             else:
                 m = record.message_sent.reply_markup
             return await record.message_sent.edit_text(text, parse_mode="MarkdownV2", link_preview_options=option, reply_markup=m)
